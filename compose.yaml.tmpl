@@ -28,7 +28,8 @@ services:
       - /srv/factory/data/apps/{{name}}-staging:/data
       - /srv/factory/claude/apps/{{name}}:/home/agent/.claude
       - /srv/factory/claude/apps/{{name}}.json:/home/agent/.claude.json
-      - /srv/factory/rules:/factory/rules:ro
+      - /srv/factory/rules:/factory/brain:ro
+      - /srv/factory/rules/rules:/factory/rules:ro
     networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
