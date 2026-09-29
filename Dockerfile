@@ -66,8 +66,11 @@ ENV GOPRIVATE=github.com/teb-ooo/* GOFLAGS=-mod=mod
 USER agent
 RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_CODE_VERSION} \
  && /usr/local/node/bin/npm install -g --prefix /home/agent/.local @beads/bd@${BD_VERSION} \
- && go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest \
- && go install github.com/pressly/goose/v3/cmd/goose@latest
+ && mkdir -p /home/agent/go/bin \
+ && GOBIN=/home/agent/go/bin GOPATH=/tmp/gopath GOMODCACHE=/tmp/gomod GOCACHE=/tmp/gocache \
+    go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest github.com/pressly/goose/v3/cmd/goose@latest \
+ && chmod -R u+w /tmp/gomod && rm -rf /tmp/gopath /tmp/gomod /tmp/gocache
+# (tools are built with temporary GOPATH/module/build caches so the layer keeps only the binaries: ~2.3 GB smaller)
 # agent-browser: the agent's interactive browser (BOOTSTRAP 9.12). Its Chrome also serves the Playwright smoke tests.
 USER root
 # `agent-browser install --with-deps` hard-codes `sudo apt-get`: install sudo for this one step and purge it after.
@@ -77,6 +80,7 @@ COPY web/.npmrc /root/.npmrc
 RUN apt-get update && apt-get install -y --no-install-recommends sudo \
  && /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
  && agent-browser install --with-deps \
+ && rm -rf /root/.agent-browser \
  && SUDO_FORCE_REMOVE=yes apt-get purge -y sudo && rm -rf /var/lib/apt/lists/* \
  && agent-browser --version
 USER agent
