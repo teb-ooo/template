@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [
+        { "type": "command", "command": "bd prime --hook-json" },
+        { "type": "command", "command": "/app/bin/hook-event session_start" }
+      ]}
+    ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "/app/bin/hook-event prompt" } ] } ],
+    "Stop":             [ { "hooks": [ { "type": "command", "command": "/app/bin/hook-event stop" } ] } ],
+    "SessionEnd":       [ { "hooks": [ { "type": "command", "command": "/app/bin/hook-event session_end" } ] } ]
+  }
+}

@@ -1,0 +1,15 @@
+# {{name}}
+{{description}}
+
+Read SPEC.md first. SPEC.md and accepted records in docs/adr/ are canon:
+propose changes, never apply them silently.
+
+Session start: bd prime runs for you. Then read brain/MEMORY.md (loaded), check
+`bd ready`, and read SPEC.md if this is a new conversation.
+
+You are the only agent for this app. Requests arrive from the owner directly or
+from the orchestrator as messages; treat both the same. Shared rules are in
+.claude/rules/factory and apply to every app in the factory.
+
+Staging: https://{{name}}-staging.{{domain}}   Production: https://{{name}}.{{domain}}
+You run on staging. Production changes only by promotion.

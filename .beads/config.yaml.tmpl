@@ -1,0 +1,6 @@
+# Beads (bd 1.2.2) connects to the shared Dolt server; connection details are written to
+# .beads/metadata.json by `bd init --server --external ...` (run by `factory new`). Environment needed
+# wherever bd runs (set in the container): BEADS_DOLT_SHARED_SERVER=1 BEADS_DOLT_SERVER_HOST=dolt
+# BEADS_DOLT_SERVER_PORT=3306 BEADS_DOLT_PASSWORD=... BEADS_DOLT_AUTO_START=0
+issue-prefix: "{{name}}"
+dolt.shared-server: true

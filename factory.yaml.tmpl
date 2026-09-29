@@ -1,0 +1,6 @@
+# Per-app factory settings. `factory new` sets gpu/assistant from its flags (--gpu, --assistant).
+name: {{name}}
+description: "{{description}}"
+subdomain: {{subdomain}}
+gpu: false          # true gives the containers the shared AMD GPU (BOOTSTRAP 4.5)
+assistant: false    # true adds the end-user assistant at /assistant (only when SPEC.md says a chat would help)

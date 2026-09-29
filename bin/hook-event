@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Posts one event to factoryd. Hooks must never fail the session: always exit 0.
+set -uo pipefail
+kind="${1:-}"; payload="$(cat)"
+session="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null)"
+summary="$(jq -r '.last_assistant_message // .prompt // empty' <<<"$payload" 2>/dev/null | head -c 200)"
+rules_commit="$(git -C /factory/rules rev-parse HEAD 2>/dev/null || true)"
+curl -s -m 3 -X POST "http://factoryd:9000/v1/events" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${FACTORYD_TOKEN:-}" \
+  -d "$(jq -cn --arg app "${APP_NAME:-}" --arg kind "$kind" --arg session "$session" --arg summary "$summary" --arg rules "$rules_commit" \
+       '{app:$app, kind:$kind, session_id:$session, summary:$summary, rules_commit:$rules}')" >/dev/null 2>&1 || true
+exit 0

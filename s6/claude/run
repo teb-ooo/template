@@ -1,0 +1,7 @@
+#!/bin/bash
+# s6 needs a foreground process and `tmux new-session -d` returns immediately, so start the tmux
+# server detached and supervise it by waiting on it. claude-start signals agent-exit when Claude exits.
+export HOME=/home/agent USER=agent LOGNAME=agent
+cd /app
+s6-setuidgid agent tmux -f /dev/null new-session -d -s agent -x 220 -y 50 /usr/local/bin/claude-start
+exec s6-setuidgid agent tmux -f /dev/null wait-for agent-exit

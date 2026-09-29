@@ -1,0 +1,12 @@
+#!/bin/bash
+# Runs inside the tmux session `agent` (started by the s6 claude service).
+cd /app
+mkdir -p /app/.factory
+# Capture the Remote Control session URL from the start banner (verified in the phase 0 spike).
+( for _ in $(seq 1 30); do
+    sleep 2
+    url="$(tmux capture-pane -p -J -t agent 2>/dev/null | grep -oE 'https://claude.ai/code/session_[A-Za-z0-9]+' | head -1)"
+    if [ -n "$url" ]; then echo "$url" > /app/.factory/session_url; break; fi
+  done ) &
+claude --continue --remote-control "$APP_NAME" || claude --remote-control "$APP_NAME"
+tmux wait-for -S agent-exit
