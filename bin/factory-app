@@ -14,11 +14,20 @@ case "${1:-}" in
     go vet ./... && go test ./... ;;
   smoke)
     # Browser smoke test (BOOTSTRAP 9.12): Playwright drives the Chrome agent-browser installed.
+    # Mint a session cookie for the running app (SESSION_KEY is in the container env) so the palette, theme and
+    # 390px tests run instead of skipping, and point Playwright at the Chrome agent-browser installed.
+    if [ -z "${SESSION_COOKIE:-}" ]; then SESSION_COOKIE=$(go run ./cmd/mintsession) || { echo "could not mint a session cookie" >&2; exit 1; }; export SESSION_COOKIE; fi
+    if [ -z "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome 2>/dev/null | tail -n1 || true); export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+    fi
     (cd web && npm run test:e2e) ;;
   restart)
     "$0" build && "$0" test
     mv /app/bin/server.new /app/bin/server
-    s6-svc -r /run/service/app
+    # The app runs as the agent user, which cannot signal s6 (the control pipe is root's): stopping the old
+    # process is enough, s6 respawns it and it execs the new /app/bin/server.
+    pkill -u "$(id -u)" -x server || true
+    sleep 1
     for i in $(seq 1 30); do curl -sf localhost:8080/healthz >/dev/null && break; sleep 1; [ "$i" = 30 ] && { echo "app did not come up; check logs: /run/service/app" >&2; exit 1; }; done
     echo "up"
     "$0" smoke ;;
