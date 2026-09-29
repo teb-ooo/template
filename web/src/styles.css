@@ -3,4 +3,4 @@
 
 /* Layout belongs to the app; colours, type and radii come only from the theme. */
 html, body, #root { height: 100%; }
-body { margin: 0; background: var(--color-ground); color: var(--color-ink); font-family: var(--font-sans); }
+body { margin: 0; background: var(--color-ground); color: var(--color-ink); }

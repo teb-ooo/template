@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # One Dockerfile, two targets: production (binary only) and staging (binary + claude + ttyd + agent-browser).
-FROM node:22-bookworm-slim AS web
-# npm >= 11.13 is needed for min-release-age (the node image ships 10.x); pinned to an npm release older than 14 days.
+FROM node:24.21.0-bookworm-slim AS web
+# npm >= 11.13 is needed for min-release-age (Node 24's bundled npm already has it); the explicit pin below is an npm release older than 14 days and is asserted.
 ARG NPM_VERSION=11.19.1
 RUN npm install -g npm@${NPM_VERSION}
 WORKDIR /src/web
@@ -49,7 +49,7 @@ ADD https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/
 RUN echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c - && tar -C /usr/local/bin -xzf /tmp/gitleaks.tgz gitleaks && rm /tmp/gitleaks.tgz
 # go + node toolchains for in-place rebuilds
 COPY --from=golang:1.27-bookworm /usr/local/go /usr/local/go
-COPY --from=node:22-bookworm-slim /usr/local /usr/local/node
+COPY --from=node:24.21.0-bookworm-slim /usr/local /usr/local/node
 ARG NPM_VERSION=11.19.1
 ENV PATH="/usr/local/go/bin:/usr/local/node/bin:/home/agent/.local/bin:/home/agent/go/bin:${PATH}"
 # npm is a script with an `env node` shebang: node must be on PATH before it runs
@@ -70,8 +70,15 @@ RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_CODE_VERSION} 
  && go install github.com/pressly/goose/v3/cmd/goose@latest
 # agent-browser: the agent's interactive browser (BOOTSTRAP 9.12). Its Chrome also serves the Playwright smoke tests.
 USER root
-RUN /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
- && agent-browser install --with-deps
+# `agent-browser install --with-deps` hard-codes `sudo apt-get`: install sudo for this one step and purge it after.
+# The package declares node >=24, which the image now provides (ADR 0072, 0073).
+# Root's npm uses the canonical .npmrc, so this global install also runs under the 14-day release-age gate.
+COPY web/.npmrc /root/.npmrc
+RUN apt-get update && apt-get install -y --no-install-recommends sudo \
+ && /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
+ && agent-browser install --with-deps \
+ && SUDO_FORCE_REMOVE=yes apt-get purge -y sudo && rm -rf /var/lib/apt/lists/* \
+ && agent-browser --version
 USER agent
 RUN agent-browser install   # per-user browser cache for the agent user
 COPY --chown=agent bin/factory-mcp /usr/local/bin/factory-mcp

@@ -41,7 +41,7 @@ function AppHeader() {
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
-      <Link to="/" className="display text-ink">
+      <Link to="/" className="text-ink">
         {name}
       </Link>
       {factory.env === "staging" ? <Chip tone="warn">staging</Chip> : null}

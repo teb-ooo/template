@@ -3,7 +3,7 @@
  *
  * Copy-ready: the same file lives at `lib/ui/test/design.test.ts` and at an app's `web/test/design.test.ts`.
  * It scans every .ts/.tsx/.css file under `../src` (relative to this file) and fails on anything that steps
- * outside the design system: one body size, one display size, one radius, semantic tokens only.
+ * outside the design system: one typeface, one body size, one display size, one radius, semantic tokens only.
  *
  * Inside the @teb-ooo/ui package (detected through ../package.json) `../theme.css` is also scanned, and it is
  * the ONE file allowed to name palette values. In an app there is no exemption: every file uses semantic tokens.
@@ -107,11 +107,17 @@ describe("design language", () => {
     expectNone(find(/\bfont-size\s*:|\bfontSize\s*:/, { skip: isTheme }), "font sizes belong to theme.css only");
   });
 
-  it("has no bold, semibold or medium weight outside the display class", () => {
+  it("has no weight utility anywhere: the only heavier weight lives in the .display-lg class of theme.css", () => {
     expectNone(
-      find(/\bfont-(bold|semibold|medium)\b/, { lineFilter: (l) => !/\bdisplay(-lg)?\b/.test(l) }),
-      "hierarchy is colour, not weight",
+      find(/(?<![-\w])font-(bold|semibold|medium|extrabold|black|light|extralight|thin)\b/),
+      "hierarchy is colour; titles use .display-lg",
     );
+    expectNone(find(/\bfont-weight\s*:|\bfontWeight\s*:/, { skip: isTheme }), "font weights belong to theme.css only");
+  });
+
+  it("declares no font-family outside theme.css: one typeface, through the tokens", () => {
+    expectNone(find(/\bfont-family\s*:|\bfontFamily\s*:/, { skip: isTheme }), "the font comes from --font-sans and --font-mono");
+    expectNone(find(/(?<![-\w])font-(serif|display)\b(?!\s*:)/), "no second typeface");
   });
 
   it("uses no neutral- scale, no important, and no near-white text steps", () => {
@@ -225,11 +231,23 @@ describe.skipIf(!IS_UI_PACKAGE)("theme.css (ui package only)", () => {
     expect(css).toMatch(/--radius:\s*0\.25rem;/);
   });
 
-  it("uses Geist Mono for both font families and ships the display face", () => {
+  it("uses Geist Mono and nothing else: one typeface", () => {
     const stack = '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
     expect(css).toContain(`--font-sans: ${stack};`);
     expect(css).toContain(`--font-mono: ${stack};`);
-    expect(css).toContain('font-family: "Nova Cut"');
+    const families = [...css.matchAll(/font-family:\s*([^;]+);/g)].map((m) => (m[1] ?? "").trim());
+    for (const f of families) expect(['"Geist Mono"', "var(--font-mono)"], `font-family: ${f}`).toContain(f);
+    expect(css.match(/@font-face/g)?.length, "exactly one @font-face").toBe(1);
+    const customFamilies = [...css.matchAll(/--font-[\w-]+:/g)].map((m) => m[0]);
+    expect(customFamilies.sort()).toEqual(["--font-mono:", "--font-sans:"]);
+  });
+
+  it("puts the only heavier weight inside the .display-lg rule", () => {
+    const withoutFace = css.replace(/@font-face\s*\{[^}]*\}/g, "");
+    const weights = [...withoutFace.matchAll(/(^|[^-\w])font-weight:\s*([^;]+);/g)].map((m) => (m[2] ?? "").trim());
+    expect(weights.sort()).toEqual(["700", "inherit"]);
+    const rule = /^\.display-lg,[\s\S]*?\}/m.exec(css)?.[0] ?? "";
+    expect(rule).toMatch(/font-weight:\s*700;/);
   });
 
   it("this test file is the copy-ready one: it has the same name everywhere", () => {
