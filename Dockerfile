@@ -33,7 +33,7 @@ ARG CLAUDE_CODE_VERSION
 ARG BD_VERSION=1.2.2
 ARG AGENT_BROWSER_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      curl ca-certificates git tmux jq xz-utils build-essential postgresql-client && rm -rf /var/lib/apt/lists/*
+      curl ca-certificates git openssh-client tmux jq xz-utils build-essential postgresql-client && rm -rf /var/lib/apt/lists/*
 # s6-overlay
 ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
 ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
