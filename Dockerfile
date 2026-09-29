@@ -89,7 +89,9 @@ COPY --chown=agent bin/factory-mcp /usr/local/bin/factory-mcp
 USER root
 COPY s6/ /etc/s6-overlay/s6-rc.d/
 COPY bin/factory-app /usr/local/bin/factory-app
-COPY bin/claude-start /usr/local/bin/claude-start
+# claude-start, the hooks and hook-event are factory-owned and arrive read-only at /opt/factory-kit (composegen mounts
+# FACTORY_ROOT/agent-kit), never from the app repository. This shim is all the image holds of them.
+RUN printf '#!/bin/sh\nexec /opt/factory-kit/bin/claude-start "$@"\n' > /usr/local/bin/claude-start && chmod 755 /usr/local/bin/claude-start
 # /app is bind-mounted over the image at runtime, so ship the first binary outside it (copied in by the app service).
 COPY --from=build /out/server /opt/factory/server
 ENV S6_KEEP_ENV=1 S6_BEHAVIOUR_IF_STAGE2_FAILS=2
