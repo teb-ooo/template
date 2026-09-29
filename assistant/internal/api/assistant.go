@@ -16,7 +16,7 @@ func init() {
 
 func mountAssistant(d *Deps) {
 	if !d.Cfg.AssistantEnabled() {
-		mountAssistantOff(d, "the assistant is not configured")
+		mountAssistantOff(d, "the assistant is not configured: no API key is set for this app (factory secrets set "+d.Cfg.AppName+" ANTHROPIC_API_KEY)")
 		return
 	}
 	h, err := assistant.New(d.API, d.Mux, d.Cfg.AssistantOptions(assistant.NewPgxStore(d.Pool)))
