@@ -1,6 +1,6 @@
 name: app-{{name}}
 networks:
-  factory: { external: true }
+  app-{{name}}: { external: true }
 services:
   staging:
     container_name: {{name}}-staging
@@ -29,7 +29,7 @@ services:
       - /srv/factory/claude/apps/{{name}}:/home/agent/.claude
       - /srv/factory/claude/apps/{{name}}.json:/home/agent/.claude.json
       - /srv/factory/rules:/factory/rules:ro
-    networks: [factory]
+    networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
@@ -49,7 +49,7 @@ services:
       PUBLIC_URL: https://{{name}}.{{domain}}
     volumes:
       - /srv/factory/data/apps/{{name}}:/data
-    networks: [factory]
+    networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]

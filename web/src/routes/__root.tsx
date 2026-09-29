@@ -40,7 +40,7 @@ function AppHeader() {
   const next = encodeURIComponent(window.location.pathname + window.location.search);
 
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+    <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 sm:gap-3">
       <Link to="/" className="text-ink">
         {name}
       </Link>
@@ -58,18 +58,18 @@ function AppHeader() {
             router.history.push("/assistant");
           }}
         >
-          Assistant
+          <span className="max-sm:sr-only">Assistant</span>
         </LinkButton>
       ) : null}
       {factory.claudeSessionUrl ? (
         <LinkButton href={factory.claudeSessionUrl} target="_blank" rel="noreferrer" icon={<Bot aria-hidden size={16} />}>
-          Claude
+          <span className="max-sm:sr-only">Claude</span>
         </LinkButton>
       ) : null}
       {isLoading ? null : user ? (
         <div className="flex items-center gap-2">
           <Avatar name={user.username || user.email} src={user.picture} size="sm" />
-          <span className="text-ink-muted">{user.username || user.email}</span>
+          <span className="text-ink-muted max-sm:sr-only">{user.username || user.email}</span>
           <LinkButton href="/auth/logout" icon={<LogOut aria-hidden size={16} />} tip="Sign out" />
         </div>
       ) : (
