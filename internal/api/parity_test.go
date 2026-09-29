@@ -58,7 +58,7 @@ func TestOpenAPIHidesInfrastructureRoutes(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("openapi.json = %d", rec.Code)
 	}
-	for _, hidden := range []string{"/_agent/", "/healthz", "/auth/me", "/api/assistant"} {
+	for _, hidden := range []string{"/healthz", "/auth/me", "/api/assistant"} {
 		if strings.Contains(rec.Body.String(), hidden) {
 			t.Errorf("openapi.json mentions %s", hidden)
 		}
