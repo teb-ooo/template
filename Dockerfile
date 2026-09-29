@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# One Dockerfile, two targets: production (binary only) and staging (binary + claude + ttyd + agent-browser).
+# One Dockerfile, two targets: production (binary only) and staging (binary + claude + agent-browser).
 FROM node:24.21.0-bookworm-slim AS web
 # npm >= 11.13 is needed for min-release-age (Node 24's bundled npm already has it); the explicit pin below is an npm release older than 14 days and is asserted.
 ARG NPM_VERSION=11.19.1
@@ -31,7 +31,6 @@ FROM ubuntu:26.04 AS staging
 ARG S6_OVERLAY_VERSION=3.2.3.2
 ARG CLAUDE_CODE_VERSION
 ARG BD_VERSION=1.2.2
-ARG TTYD_VERSION=1.7.7
 ARG AGENT_BROWSER_VERSION
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git tmux jq xz-utils build-essential postgresql-client && rm -rf /var/lib/apt/lists/*
@@ -39,9 +38,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp
 ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp
 RUN tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz && rm -f /tmp/s6-overlay-*.tar.xz
-# ttyd
-ADD https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64 /usr/local/bin/ttyd
-RUN chmod +x /usr/local/bin/ttyd
 # gitleaks: the pre-commit secret scan (BOOTSTRAP 4.6); pinned and checksum-verified
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb

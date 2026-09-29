@@ -1,3 +1,0 @@
-#!/bin/bash
-export HOME=/home/agent USER=agent LOGNAME=agent
-exec s6-setuidgid agent ttyd -p 7681 -W -t fontSize=14 -t 'theme={"background":"#0e141b"}' tmux -f /dev/null attach -t agent

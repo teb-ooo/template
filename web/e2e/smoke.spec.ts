@@ -21,7 +21,6 @@ const routes = staticRoutes(readFileSync(join(here, "..", "src", "routeTree.gen.
 /** URLs (path only) whose 4xx/5xx responses are expected. Extend deliberately, with a reason. */
 const allowedFailures: { path: RegExp; status: number; reason: string; onlyWithoutSession?: boolean }[] = [
   { path: /^\/auth\/me$/, status: 401, reason: "useUser probes the session; 401 means signed out", onlyWithoutSession: true },
-  { path: /^\/_agent\/status$/, status: 404, reason: "production has no agent panel: the page polls a status endpoint that only exists on staging" },
 ];
 
 const sessionCookie = process.env.SESSION_COOKIE;
@@ -116,7 +115,6 @@ test.describe("command palette", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     const factory = await page.evaluate(() => window.__FACTORY__ ?? {});
-    const env = typeof factory.env === "string" ? factory.env : "";
     const claudeUrl = typeof factory.claude_session_url === "string" ? factory.claude_session_url : "";
 
     await page.keyboard.press("Control+K");
@@ -131,9 +129,7 @@ test.describe("command palette", () => {
 
     // Apps follow the system colour scheme: the palette has no theme command and the header no theme control.
     await expect(page.getByRole("option", { name: /theme/i })).toHaveCount(0);
-    const agentPanel = page.getByRole("option", { name: /Open agent panel/ });
-    if (env === "staging") await expect(agentPanel).toBeVisible();
-    else await expect(agentPanel).toHaveCount(0);
+    await expect(page.getByRole("option", { name: /agent panel/i })).toHaveCount(0); // the in-browser terminal is gone
     const claudeApp = page.getByRole("option", { name: /Open in Claude app/ });
     if (claudeUrl !== "") await expect(claudeApp).toBeVisible();
     else await expect(claudeApp).toHaveCount(0);

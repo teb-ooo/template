@@ -28,7 +28,6 @@ export default defineConfig({
     proxy: {
       "/api": backend,
       "/auth": backend,
-      "/_agent": { target: backend, ws: true },
       "/healthz": backend,
       "/openapi.json": backend,
     },

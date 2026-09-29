@@ -36,7 +36,7 @@ describe("root route", () => {
   });
 
   it("opens the command palette with the shortcut and lists the route and the app command", async () => {
-    setFactory({ app_name: "hello", env: "staging", agent_url: "/_agent/tty/" });
+    setFactory({ app_name: "hello", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Items" });
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
@@ -45,16 +45,10 @@ describe("root route", () => {
     // "Go to" reads staticData.title, the route's own command comes from useRegisterCommands.
     expect(screen.getByRole("option", { name: /Items/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /New item/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Open agent panel/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /agent panel/i })).toBeNull();
     // Apps follow the system colour scheme: there is no theme command.
     expect(screen.queryByRole("option", { name: /theme/i })).toBeNull();
     fireEvent.keyDown(box, { key: "Escape" });
   });
 
-  it("tells a non-admin they need admin access on the agent panel", async () => {
-    setFactory({ app_name: "hello", env: "staging", agent_url: "/_agent/tty/" });
-    renderApp("/_agent");
-    // A non-admin is redirected to the start page by the guard.
-    expect(await screen.findByRole("heading", { name: "Items" })).toBeTruthy();
-  });
 });

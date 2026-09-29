@@ -1,4 +1,4 @@
-import { Link, Outlet, createRootRouteWithContext, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, Outlet, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { CommandProvider, CommandTrigger } from "@teb-ooo/cmdk";
 import { Avatar, Chip, LinkButton } from "@teb-ooo/ui";
@@ -35,7 +35,6 @@ function RootLayout() {
 
 function AppHeader() {
   const { user, isLoading } = useUser();
-  const navigate = useNavigate();
   const router = useRouter();
   const name = factory.appName || "app";
   const next = encodeURIComponent(window.location.pathname + window.location.search);
@@ -62,18 +61,9 @@ function AppHeader() {
           Assistant
         </LinkButton>
       ) : null}
-      {factory.agentUrl ? (
-        <LinkButton
-          href="/_agent"
-          icon={<Bot aria-hidden size={16} />}
-          onClick={(e) => {
-            // Keep it a real link (new tab, copy address) but navigate inside the app on a plain click.
-            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-            e.preventDefault();
-            void navigate({ to: "/_agent" });
-          }}
-        >
-          Agent
+      {factory.claudeSessionUrl ? (
+        <LinkButton href={factory.claudeSessionUrl} target="_blank" rel="noreferrer" icon={<Bot aria-hidden size={16} />}>
+          Claude
         </LinkButton>
       ) : null}
       {isLoading ? null : user ? (

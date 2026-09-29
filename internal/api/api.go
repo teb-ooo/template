@@ -66,7 +66,6 @@ func build(cfg factory.Config, pool *pgxpool.Pool) (http.Handler, huma.API, http
 	health.Register(humaAPI, pool, cfg.Version, health.WithEnv(cfg.Env))
 
 	d := &Deps{Cfg: cfg, Pool: pool, Mux: mux, API: humaAPI, Q: db.New(pool)}
-	registerAgent(d)
 	for _, register := range registrations {
 		register(d)
 	}
