@@ -21,6 +21,7 @@ const routes = staticRoutes(readFileSync(join(here, "..", "src", "routeTree.gen.
 /** URLs (path only) whose 4xx/5xx responses are expected. Extend deliberately, with a reason. */
 const allowedFailures: { path: RegExp; status: number; reason: string; onlyWithoutSession?: boolean }[] = [
   { path: /^\/auth\/me$/, status: 401, reason: "useUser probes the session; 401 means signed out", onlyWithoutSession: true },
+  { path: /^\/_agent\/status$/, status: 404, reason: "production has no agent panel: the page polls a status endpoint that only exists on staging" },
 ];
 
 const sessionCookie = process.env.SESSION_COOKIE;
