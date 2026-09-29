@@ -35,7 +35,7 @@ function ItemsPage() {
   const name = form.field<string>("name");
 
   // Every user action has a command (BOOTSTRAP 9.7c). The palette returns focus to the element that had it when it
-  // closes, so the focus move waits one frame to win.
+  // closes, so the focus move goes through ctx.afterClose to win.
   const nameInput = useRef<HTMLInputElement>(null);
   useRegisterCommands([
     {
@@ -44,8 +44,8 @@ function ItemsPage() {
       group: "Items",
       keywords: ["add", "create", "item", "name"],
       icon: Plus,
-      run: () => {
-        requestAnimationFrame(() => {
+      run: (ctx) => {
+        ctx.afterClose(() => {
           nameInput.current?.scrollIntoView?.({ block: "center" });
           nameInput.current?.focus();
         });

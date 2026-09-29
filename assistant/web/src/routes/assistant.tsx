@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Chip, Field, Input } from "@teb-ooo/ui";
-import { RequireUser, createApi, useEventStream } from "@teb-ooo/web";
+import { RequireUser, createApi, useEventStream, type AssistantEvents } from "@teb-ooo/web";
 import { Send } from "lucide-react";
 import { describeError } from "../api/describe-error";
 
@@ -16,18 +16,6 @@ export const Route = createFileRoute("/assistant")({
   beforeLoad: RequireUser,
   component: AssistantPage,
 });
-
-/**
- * Server-sent events of `POST /api/assistant/conversations/{id}/messages` (factory-go `assistant` package).
- * `AssistantEvents` from @teb-ooo/web lacks the `error` event the Go side also sends, so the full set is declared here.
- */
-interface AssistantStreamEvents {
-  text: { text: string };
-  tool_call: { id: string; name: string; input: unknown };
-  tool_result: { id: string; content: unknown; is_error?: boolean };
-  done: { stop_reason?: string };
-  error: { detail: string };
-}
 
 /**
  * The assistant endpoints exist only when the app enables the assistant, so they are not in the committed
@@ -80,7 +68,7 @@ function AssistantPage() {
       return last && last.role === "assistant" ? [...all.slice(0, -1), update(last)] : all;
     });
 
-  const stream = useEventStream<AssistantStreamEvents>(
+  const stream = useEventStream<AssistantEvents>(
     conversationId ? `/api/assistant/conversations/${conversationId}/messages` : null,
     {
       text: ({ text }) =>
