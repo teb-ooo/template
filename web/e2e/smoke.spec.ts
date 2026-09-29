@@ -75,3 +75,61 @@ for (const route of routes) {
     expect(problems, problems.join("\n")).toEqual([]);
   });
 }
+
+// The Cmd+K palette (BOOTSTRAP 9.7c, exit item 12). Needs a signed-in page: "/" requires a user.
+test.describe("command palette", () => {
+  test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
+
+  test("opens with Ctrl+K, lists routes and built-ins, runs the create-item command, closes with Esc", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const factory = await page.evaluate(() => window.__FACTORY__ ?? {});
+    const env = typeof factory.env === "string" ? factory.env : "";
+    const claudeUrl = typeof factory.claude_session_url === "string" ? factory.claude_session_url : "";
+
+    await page.keyboard.press("Control+K");
+    const input = page.getByRole("combobox", { name: "Search commands" });
+    await expect(input).toBeVisible();
+    await expect(page.getByRole("listbox")).toBeVisible();
+
+    // One "Go to" entry per static route. The palette hides private routes (path segment starting with "_").
+    const navigable = routes.filter((r) => !r.split("/").some((seg) => seg.startsWith("_")));
+    const goTo = page.getByRole("group", { name: "Go to" }).getByRole("option");
+    await expect(goTo).toHaveCount(navigable.length);
+
+    await expect(page.getByRole("option", { name: /Toggle theme/ })).toBeVisible();
+    const agentPanel = page.getByRole("option", { name: /Open agent panel/ });
+    if (env === "staging") await expect(agentPanel).toBeVisible();
+    else await expect(agentPanel).toHaveCount(0);
+    const claudeApp = page.getByRole("option", { name: /Open in Claude app/ });
+    if (claudeUrl !== "") await expect(claudeApp).toBeVisible();
+    else await expect(claudeApp).toHaveCount(0);
+    await page.screenshot({ path: join(shots, "palette-desktop.png") });
+
+    await input.fill("new");
+    await expect(page.getByRole("option", { name: /New item/ })).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Name" })).toBeFocused();
+
+    await page.keyboard.press("Control+K");
+    await expect(input).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("on a 390px wide screen the trigger opens a full-height sheet", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Open command palette" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(844 * 0.95);
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(390 * 0.95);
+    mkdirSync(shots, { recursive: true });
+    await page.screenshot({ path: join(shots, "palette-mobile.png") });
+  });
+});

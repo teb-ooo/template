@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { createTestQueryClient, http, HttpResponse, setFactory, setupMswServer } from "@teb-ooo/web/testing";
@@ -7,6 +7,7 @@ import { routeTree } from "./routeTree.gen";
 
 const user = { subject: "u1", email: "ada@example.com", username: "ada", groups: [], is_admin: false };
 
+afterEach(cleanup);
 window.scrollTo = () => undefined; // jsdom does not implement it; the router calls it on navigation
 
 setupMswServer(
@@ -32,6 +33,20 @@ describe("root route", () => {
     expect(screen.getByText("staging")).toBeTruthy();
     expect(await screen.findByText("ada")).toBeTruthy();
     expect(await screen.findByText(/There are no items yet/)).toBeTruthy();
+  });
+
+  it("opens the command palette with the shortcut and lists the route and the app command", async () => {
+    setFactory({ app_name: "hello", env: "staging", agent_url: "/_agent/tty/" });
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Items" });
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    const box = await screen.findByRole("combobox");
+    expect(box).toBeTruthy();
+    // "Go to" reads staticData.title, the route's own command comes from useRegisterCommands.
+    expect(screen.getByRole("option", { name: /Items/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /New item/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Open agent panel/ })).toBeTruthy();
+    fireEvent.keyDown(box, { key: "Escape" });
   });
 
   it("tells a non-admin they need admin access on the agent panel", async () => {

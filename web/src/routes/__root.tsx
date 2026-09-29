@@ -1,5 +1,6 @@
 import { Link, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+import { CommandProvider, CommandTrigger } from "@teb-ooo/cmdk";
 import { Avatar, Badge } from "@teb-ooo/ui";
 import { factory, isForbiddenError, useUser } from "@teb-ooo/web";
 import { Bot, LogIn, LogOut } from "lucide-react";
@@ -18,14 +19,17 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 const linkClass = "inline-flex items-center gap-1 text-muted underline";
 
 function RootLayout() {
-  // When @teb-ooo/command is added: wrap this fragment's root in <CommandProvider> (BOOTSTRAP 9.7c).
+  // The provider lives in the root route component, so it is inside the router (it reads the router for the
+  // "Go to" entries). Never remove it (BOOTSTRAP 9.7c).
   return (
-    <div className="flex min-h-full flex-col">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
-        <Outlet />
-      </main>
-    </div>
+    <CommandProvider>
+      <div className="flex min-h-full flex-col">
+        <AppHeader />
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+          <Outlet />
+        </main>
+      </div>
+    </CommandProvider>
   );
 }
 
@@ -41,7 +45,7 @@ function AppHeader() {
       </Link>
       {factory.env === "staging" ? <Badge tone="accent">staging</Badge> : null}
       <div className="flex-1" />
-      {/* Slot: <CommandTrigger /> goes here once @teb-ooo/command exists. */}
+      <CommandTrigger />
       {factory.agentUrl ? (
         <Link to="/_agent" className={linkClass}>
           <Bot aria-hidden size={16} />

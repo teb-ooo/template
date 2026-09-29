@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { Button, Field, Input } from "@teb-ooo/ui";
 import { RequireUser, createApi, useEventStream } from "@teb-ooo/web";
@@ -8,6 +8,11 @@ import { describeError } from "../api/describe-error";
 
 export const Route = createFileRoute("/assistant")({
   staticData: { title: "Assistant" },
+  // The command palette's "Ask assistant..." navigates here with ?q=<first message>.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const q = typeof search.q === "string" ? search.q.trim() : "";
+    return q === "" ? {} : { q };
+  },
   beforeLoad: RequireUser,
   component: AssistantPage,
 });
@@ -52,6 +57,8 @@ type Step = { kind: "text"; text: string } | { kind: "tool"; id: string; name: s
 type Turn = { role: "user"; text: string } | { role: "assistant"; steps: Step[]; problem?: string };
 
 function AssistantPage() {
+  const { q } = Route.useSearch();
+  const navigate = useNavigate();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
@@ -98,11 +105,7 @@ function AssistantPage() {
 
   const busy = createConversation.isPending || stream.status === "connecting" || stream.status === "open";
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const content = draft.trim();
-    if (!content || busy) return;
-    setDraft("");
+  async function sendMessage(content: string) {
     setTurns((all) => [...all, { role: "user", text: content }, { role: "assistant", steps: [] }]);
     if (!conversationId) {
       try {
@@ -116,6 +119,24 @@ function AssistantPage() {
     }
     await stream.send({ content });
   }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const content = draft.trim();
+    if (!content || busy) return;
+    setDraft("");
+    await sendMessage(content);
+  }
+
+  // The first message may arrive in the URL. `handledQ` guards against StrictMode's double effect and re-renders;
+  // the parameter is then removed from the URL so a reload does not send it again.
+  const handledQ = useRef<string | null>(null);
+  useEffect(() => {
+    if (!q || handledQ.current === q) return;
+    handledQ.current = q;
+    void navigate({ to: "/assistant", search: {}, replace: true });
+    void sendMessage(q);
+  }, [q]);
 
   useEffect(() => {
     if (pending === null || conversationId === null) return;

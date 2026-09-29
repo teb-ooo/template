@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useRegisterCommands } from "@teb-ooo/cmdk";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Field, Input } from "@teb-ooo/ui";
 import { RequireUser, createBodyValidator, fmtRelative, isApiError, useForm } from "@teb-ooo/web";
@@ -31,6 +33,25 @@ function ItemsPage() {
     },
   });
   const name = form.field<string>("name");
+
+  // Every user action has a command (BOOTSTRAP 9.7c). The palette returns focus to the element that had it when it
+  // closes, so the focus move waits one frame to win.
+  const nameInput = useRef<HTMLInputElement>(null);
+  useRegisterCommands([
+    {
+      id: "create-item",
+      title: "New item",
+      group: "Items",
+      keywords: ["add", "create", "item", "name"],
+      icon: Plus,
+      run: () => {
+        requestAnimationFrame(() => {
+          nameInput.current?.scrollIntoView?.({ block: "center" });
+          nameInput.current?.focus();
+        });
+      },
+    },
+  ]);
   // A server error that is not about the name field (for example a 500) is shown as a sentence under the form.
   const list = items.data?.items ?? [];
   const submitProblem = create.error && !(isApiError(create.error) && create.error.fieldErrors["body.name"]) ? create.error : null;
@@ -41,7 +62,7 @@ function ItemsPage() {
 
       <form onSubmit={form.handleSubmit} className="flex flex-col gap-3" noValidate>
         <Field label="Name" error={name.error} description="What to call the new item.">
-          <Input value={name.value} onChange={(e) => name.onChange(e.target.value)} onBlur={name.onBlur} autoComplete="off" />
+          <Input ref={nameInput} value={name.value} onChange={(e) => name.onChange(e.target.value)} onBlur={name.onBlur} autoComplete="off" />
         </Field>
         <div>
           <Button type="submit" intent="solid" loading={form.isSubmitting}>
