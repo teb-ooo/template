@@ -51,8 +51,9 @@ RUN echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c - && tar -C /usr
 COPY --from=golang:1.27-bookworm /usr/local/go /usr/local/go
 COPY --from=node:22-bookworm-slim /usr/local /usr/local/node
 ARG NPM_VERSION=11.19.1
-RUN /usr/local/node/bin/npm install -g --prefix /usr/local/node npm@${NPM_VERSION} && /usr/local/node/bin/npm config ls -l | grep -q '^min-release-age'
 ENV PATH="/usr/local/go/bin:/usr/local/node/bin:/home/agent/.local/bin:/home/agent/go/bin:${PATH}"
+# npm is a script with an `env node` shebang: node must be on PATH before it runs
+RUN /usr/local/node/bin/npm install -g --prefix /usr/local/node npm@${NPM_VERSION} && /usr/local/node/bin/npm config ls -l | grep -q '^min-release-age'
 # Both ubuntu:24.04 and 26.04 ship a stock `ubuntu` user at uid 1000: delete it first (ADR 0003).
 RUN userdel -r ubuntu && useradd -m -u 1000 -s /bin/bash agent
 # The private Go module (factory-go) comes from a module cache baked at image build: staging containers hold no
