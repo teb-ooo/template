@@ -81,6 +81,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends sudo \
  && rm -rf /root/.agent-browser \
  && SUDO_FORCE_REMOVE=yes apt-get purge -y sudo && rm -rf /var/lib/apt/lists/* \
  && agent-browser --version
+# root's bd (the same binary is on PATH) must not send metrics either: shells opened with `docker exec` run as root
+RUN bd metrics off
 USER agent
 RUN agent-browser install   # per-user browser cache for the agent user
 COPY --chown=agent bin/factory-mcp /usr/local/bin/factory-mcp
