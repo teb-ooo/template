@@ -29,6 +29,23 @@ function screenshotName(route: string): string {
   return route === "/" ? "index" : route.replace(/^\//, "").replace(/\//g, "-");
 }
 
+/**
+ * The Content-Security-Policy Caddy adds to every site (compose/caddy/Caddyfile, `security_headers`). The app itself
+ * sends none, so a test that talks to the app directly would never see a violation. Documents are re-served with the
+ * same header, so anything the policy blocks (`unsafe-eval` from `new Function`, inline scripts, other origins)
+ * shows up as a console error and fails the route tests below.
+ */
+const CSP =
+  "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'";
+
+test.beforeEach(async ({ context }) => {
+  await context.route("**/*", async (route) => {
+    if (route.request().resourceType() !== "document") return route.continue();
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), "content-security-policy": CSP } });
+  });
+});
+
 test.beforeEach(async ({ context, baseURL }) => {
   if (!sessionCookie) return;
   const eq = sessionCookie.indexOf("=");
