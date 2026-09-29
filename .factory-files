@@ -1,0 +1,19 @@
+# Files the factory owns in every app repository: each must equal the template's copy byte for byte.
+# The factory edits them directly (bin/sync-factory-files) and restarts the agent; an app never edits them.
+# Paths are relative to the repository root. A path ending in a symlink is compared by its target.
+.factory-files
+AGENTS.md
+.claude/rules/factory
+.githooks/pre-commit
+.gitleaks.toml
+bin/factory-app
+s6/app/run
+s6/app/type
+s6/claude/dependencies.d/app
+s6/claude/run
+s6/claude/type
+s6/user/contents.d/app
+s6/user/contents.d/claude
+s6/user/type
+web/.npmrc
+web/test/design.test.ts

@@ -1,15 +1,8 @@
 # {{name}}
 {{description}}
 
-Read the brain first: /factory/brain/BRAIN.md and its rules/, then brain/BRAIN.md and its rules/ (see AGENTS.md).
-brain/docs/spec.md and the decisions the owner accepted are canon: propose changes, never apply them silently.
-
-Session start: bd prime runs for you. Then read the two brain indexes and their rules, check `bd ready`, and read
-brain/docs/spec.md if this is a new conversation.
-
-You are the only agent for this app. Requests arrive from the owner directly or
-from the orchestrator as messages; treat both the same. The shared rules are in
-/factory/brain/rules and apply to every app in the factory.
-
 Staging: https://{{name}}-staging.{{domain}}   Production: https://{{name}}.{{domain}}
 You run on staging. Production changes only by promotion.
+
+The app's brain is in brain/ (start at brain/BRAIN.md). Everything else the factory tells you is in your user-level
+instructions and the shared brain, which the factory rewrites at every start.
