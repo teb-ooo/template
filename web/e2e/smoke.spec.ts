@@ -41,11 +41,22 @@ const CSP =
   "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'";
 
 test.beforeEach(async ({ context }) => {
-  await context.addInitScript((csp: string) => {
+  await context.addInitScript((policy) => {
     const meta = document.createElement("meta");
     meta.httpEquiv = "Content-Security-Policy";
-    meta.content = csp;
-    (document.head ?? document.documentElement).appendChild(meta);
+    meta.content = policy;
+    // The script can run before the document has any element: wait for the first one, still before any page script.
+    const attach = () => {
+      const parent = document.head ?? document.documentElement;
+      parent?.appendChild(meta);
+      return parent !== null;
+    };
+    if (!attach()) {
+      const observer = new MutationObserver(() => {
+        if (attach()) observer.disconnect();
+      });
+      observer.observe(document, { childList: true, subtree: true });
+    }
   }, CSP);
 });
 
