@@ -27,7 +27,7 @@ function renderApp(path: string) {
 
 describe("root route", () => {
   it("renders the header, the signed-in user and the empty state", async () => {
-    setFactory({ app_name: "hello", env: "staging" });
+    setFactory({ app_name: "sample", env: "staging" });
     renderApp("/");
     expect(await screen.findByRole("heading", { name: "Items" })).toBeTruthy();
     expect(screen.getByText("staging")).toBeTruthy();
@@ -36,7 +36,7 @@ describe("root route", () => {
   });
 
   it("opens the command palette with the shortcut and lists the route and the app command", async () => {
-    setFactory({ app_name: "hello", env: "staging" });
+    setFactory({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Items" });
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });

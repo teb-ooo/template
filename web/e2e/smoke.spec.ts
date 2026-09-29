@@ -188,3 +188,24 @@ test("signed out: the start page navigates to /auth/login instead of rendering n
   expect(loginRequests).toBeGreaterThan(0);
   await expect(page.getByText("There is nothing at this address.")).toHaveCount(0);
 });
+
+// Phones: the header stays on one row, the page does not scroll sideways, and the palette sheet can be closed by touch.
+test.describe("390px", () => {
+  test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("the header does not wrap, nothing overflows, the palette sheet closes with its Close button", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const header = await page.locator("header").boundingBox();
+    expect(header?.height ?? Infinity).toBeLessThan(60);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+    await page.getByRole("button", { name: "Open command palette" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    expect((await dialog.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(844 * 0.95);
+    await page.getByRole("button", { name: "Close command palette" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
