@@ -147,18 +147,14 @@ func (a *agentRoutes) fetchStatus(ctx context.Context) agentStatus {
 	if resp.StatusCode != http.StatusOK {
 		return unknown
 	}
-	// The status is either at the top level or under "agent".
+	// factoryd's GET /v1/apps/{name} carries the agent's status under "agent" (checked against the live daemon).
 	var body struct {
-		agentFields
 		Agent *agentFields `json:"agent"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil || body.Agent == nil {
 		return unknown
 	}
-	f := body.agentFields
-	if body.Agent != nil {
-		f = *body.Agent
-	}
+	f := *body.Agent
 	if f.Status == "" {
 		return unknown
 	}

@@ -127,12 +127,12 @@ func TestAgentStatusFromFactoryd(t *testing.T) {
 		wantStatus string
 		wantSum    string
 	}{
-		{"top level", "tok", func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = w.Write([]byte(`{"status":"working","since":"2026-09-29T10:00:00Z","last_summary":"did a thing"}`))
+		{"live shape: under agent", "tok", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"name":"hello","agent":{"app":"hello","status":"working","since":"2026-09-29T10:00:00Z","last_summary":"did a thing","last_event_at":"2026-09-29T10:00:00Z"}}`))
 		}, "working", "did a thing"},
-		{"nested under agent", "tok", func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = w.Write([]byte(`{"name":"hello","agent":{"status":"idle","last_summary":"done"}}`))
-		}, "idle", "done"},
+		{"no agent object", "tok", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"status":"working"}`))
+		}, "unknown", ""},
 		{"server error", "tok", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(500) }, "unknown", ""},
 		{"garbage", "tok", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`<html>`)) }, "unknown", ""},
 		{"no token", "", func(w http.ResponseWriter, _ *http.Request) { t.Error("factoryd must not be called") }, "unknown", ""},
