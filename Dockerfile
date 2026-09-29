@@ -66,6 +66,8 @@ RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_CODE_VERSION} 
  && GOBIN=/home/agent/go/bin GOPATH=/tmp/gopath GOMODCACHE=/tmp/gomod GOCACHE=/tmp/gocache \
     sh -c 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && go install github.com/pressly/goose/v3/cmd/goose@latest' \
  && chmod -R u+w /tmp/gomod && rm -rf /tmp/gopath /tmp/gomod /tmp/gocache
+# bd sends anonymous usage metrics to a third party by default: off for the agent user (ADR 0078)
+RUN bd metrics off
 # (tools are built with temporary GOPATH/module/build caches so the layer keeps only the binaries: ~2.3 GB smaller)
 # agent-browser: the agent's interactive browser (BOOTSTRAP 9.12). Its Chrome also serves the Playwright smoke tests.
 USER root
