@@ -175,3 +175,20 @@ test.describe("command palette", () => {
     await page.screenshot({ path: join(shots, "palette-mobile.png") });
   });
 });
+
+// Signed out, a guarded page must send the browser to the sign-in page (a real document load), not render the
+// router's not-found page. The sign-in page itself is served by the Go app and redirects to the identity
+// provider, which a test cannot reach, so its response is stubbed.
+test("signed out: the start page navigates to /auth/login instead of rendering not-found", async ({ page, context }) => {
+  await context.clearCookies();
+  let loginRequests = 0;
+  await context.route("**/auth/login**", (route) => {
+    loginRequests++;
+    return route.fulfill({ status: 200, contentType: "text/html", body: "<title>sign in</title><p>sign-in page</p>" });
+  });
+  await page.goto("/");
+  await expect(page.getByText("sign-in page")).toBeVisible();
+  expect(page.url()).toContain("/auth/login?next=%2F");
+  expect(loginRequests).toBeGreaterThan(0);
+  await expect(page.getByText("There is nothing at this address.")).toHaveCount(0);
+});

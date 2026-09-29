@@ -1,9 +1,9 @@
-import { Link, Outlet, createRootRouteWithContext, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, createRootRouteWithContext, useNavigate, useRouter } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { CommandProvider, CommandTrigger } from "@teb-ooo/cmdk";
 import { Avatar, Chip, LinkButton } from "@teb-ooo/ui";
 import { factory, isForbiddenError, useUser } from "@teb-ooo/web";
-import { Bot, LogIn, LogOut } from "lucide-react";
+import { Bot, LogIn, LogOut, MessageCircle } from "lucide-react";
 import { describeError } from "../api/describe-error";
 
 export interface RouterContext {
@@ -36,6 +36,7 @@ function RootLayout() {
 function AppHeader() {
   const { user, isLoading } = useUser();
   const navigate = useNavigate();
+  const router = useRouter();
   const name = factory.appName || "app";
   const next = encodeURIComponent(window.location.pathname + window.location.search);
 
@@ -47,6 +48,20 @@ function AppHeader() {
       {factory.env === "staging" ? <Chip tone="warn">staging</Chip> : null}
       <div className="flex-1" />
       <CommandTrigger />
+      {factory.assistant ? (
+        <LinkButton
+          href="/assistant"
+          icon={<MessageCircle aria-hidden size={16} />}
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            // The route only exists in assistant apps (overlay), so it is not in the typed route tree of the base template.
+            router.history.push("/assistant");
+          }}
+        >
+          Assistant
+        </LinkButton>
+      ) : null}
       {factory.agentUrl ? (
         <LinkButton
           href="/_agent"
