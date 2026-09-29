@@ -31,19 +31,22 @@ function screenshotName(route: string): string {
 
 /**
  * The Content-Security-Policy Caddy adds to every site (compose/caddy/Caddyfile, `security_headers`). The app itself
- * sends none, so a test that talks to the app directly would never see a violation. Documents are re-served with the
- * same header, so anything the policy blocks (`unsafe-eval` from `new Function`, inline scripts, other origins)
- * shows up as a console error and fails the route tests below.
+ * sends none, so a test that talks to the app directly would never see a violation. Every page gets the same policy
+ * as a <meta> tag before any script runs (`frame-ancestors` is header-only and left out), so anything it blocks
+ * (`unsafe-eval` from `new Function`, inline scripts, other origins) is a console error that fails the tests below.
+ * A meta tag, not a rewritten response: re-served documents lose their address space and Chrome then blocks the
+ * candidate's private-network subresources.
  */
 const CSP =
-  "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'";
+  "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'";
 
 test.beforeEach(async ({ context }) => {
-  await context.route("**/*", async (route) => {
-    if (route.request().resourceType() !== "document") return route.continue();
-    const response = await route.fetch();
-    await route.fulfill({ response, headers: { ...response.headers(), "content-security-policy": CSP } });
-  });
+  await context.addInitScript((csp: string) => {
+    const meta = document.createElement("meta");
+    meta.httpEquiv = "Content-Security-Policy";
+    meta.content = csp;
+    (document.head ?? document.documentElement).appendChild(meta);
+  }, CSP);
 });
 
 test.beforeEach(async ({ context, baseURL }) => {
