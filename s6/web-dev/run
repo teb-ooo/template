@@ -1,0 +1,5 @@
+#!/bin/bash
+# The Vite dev server (HMR), staging only. The logic is factory-owned and lives in the kit (live mount); this is a shim.
+export HOME=/home/agent USER=agent LOGNAME=agent
+cd /app
+exec s6-setuidgid agent /opt/factory-kit/bin/web-dev

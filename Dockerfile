@@ -11,6 +11,9 @@ COPY web/package*.json web/.npmrc ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build                      # -> /src/web/dist
+# Staging serves web/ through the Vite dev server (HMR); production never does. Fail the image build if dev-server code
+# or the staging CSP nonce ended up in the bundle.
+RUN if grep -rIlE '/@vite/client|@react-refresh|RefreshRuntime|vite/dist/client|nonce-[A-Za-z0-9_-]{22}' dist; then echo "dev-server code or a staging nonce in the production bundle" >&2; exit 1; fi
 
 FROM golang:1.27-bookworm AS build
 ENV GOPRIVATE=github.com/teb-ooo/*

@@ -7,6 +7,8 @@ case "${1:-}" in
     (cd web && npm ci --silent && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
     node /factory/rules/tools/check-no-eval.mjs web/dist
+    # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
+    node /factory/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
     CGO_ENABLED=0 go build -o /app/bin/server.new ./cmd/server ;;
   test)

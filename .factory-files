@@ -14,6 +14,9 @@ s6/claude/run
 s6/claude/type
 s6/user/contents.d/app
 s6/user/contents.d/claude
+s6/user/contents.d/web-dev
 s6/user/type
+s6/web-dev/run
+s6/web-dev/type
 web/.npmrc
 web/test/design.test.ts
