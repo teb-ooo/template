@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { Button, Field, Input } from "@teb-ooo/ui";
+import { Button, Chip, Field, Input } from "@teb-ooo/ui";
 import { RequireUser, createApi, useEventStream } from "@teb-ooo/web";
 import { Send } from "lucide-react";
 import { describeError } from "../api/describe-error";
@@ -146,33 +146,38 @@ function AssistantPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl text-ink">Assistant</h1>
+      <h1 className="display-lg text-ink">Assistant</h1>
 
       {turns.length === 0 ? (
-        <p className="text-sm text-muted">Ask the assistant to look something up or make a change. It can do what you can do here, and nothing more.</p>
+        <div className="flex flex-col gap-2 py-6">
+          <p className="display-lg text-ink">Ask anything</p>
+          <p className="text-ink-muted">The assistant can look things up and make changes. It can do what you can do here, and nothing more.</p>
+        </div>
       ) : (
         <ol className="flex flex-col gap-4" aria-live="polite">
           {turns.map((turn, i) =>
             turn.role === "user" ? (
-              <li key={i} className="border-b border-line pb-2 text-base text-ink">
+              <li key={i} className="border-b border-line pb-2 text-ink-muted">
                 {turn.text}
               </li>
             ) : (
               <li key={i} className="flex flex-col gap-2">
                 {turn.steps.map((step, j) =>
                   step.kind === "text" ? (
-                    <p key={j} className="whitespace-pre-wrap text-base text-ink">
+                    <p key={j} className="whitespace-pre-wrap text-ink">
                       {step.text}
                     </p>
                   ) : (
-                    <p key={step.id} className="text-sm text-muted">
-                      {step.state === "running" ? "Using " : step.state === "failed" ? "Could not use " : "Used "}
-                      <span className="text-ink">{step.name}</span>
-                      {step.state === "running" ? "..." : "."}
-                    </p>
+                    <div key={step.id}>
+                      <Chip tone={step.state === "failed" ? "danger" : "agent"}>
+                        {step.state === "running" ? "Using " : step.state === "failed" ? "Could not use " : "Used "}
+                        {step.name}
+                        {step.state === "running" ? "..." : ""}
+                      </Chip>
+                    </div>
                   ),
                 )}
-                {turn.problem ? <p role="alert" className="text-sm text-danger">The assistant stopped: {turn.problem}</p> : null}
+                {turn.problem ? <p role="alert" className="text-danger">The assistant stopped: {turn.problem}</p> : null}
               </li>
             ),
           )}
@@ -180,19 +185,18 @@ function AssistantPage() {
       )}
 
       {createConversation.error ? (
-        <p role="alert" className="text-sm text-danger">The conversation could not be started. {describeError(createConversation.error)}</p>
+        <p role="alert" className="text-danger">The conversation could not be started. {describeError(createConversation.error)}</p>
       ) : null}
       {stream.error && stream.status === "error" ? (
-        <p role="alert" className="text-sm text-danger">The connection to the assistant failed. {describeError(stream.error)}</p>
+        <p role="alert" className="text-danger">The connection to the assistant failed. {describeError(stream.error)}</p>
       ) : null}
 
-      <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
+      <form onSubmit={(e) => void submit(e)} className="panel flex flex-col gap-3 p-4">
         <Field label="Message">
           <Input value={draft} onChange={(e) => setDraft(e.target.value)} autoComplete="off" />
         </Field>
         <div>
-          <Button type="submit" intent="solid" loading={busy} disabled={draft.trim() === ""}>
-            <Send aria-hidden size={16} />
+          <Button type="submit" intent="solid" icon={<Send aria-hidden size={16} />} loading={busy} disabled={draft.trim() === ""}>
             Send
           </Button>
         </div>

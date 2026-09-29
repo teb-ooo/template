@@ -32,7 +32,7 @@ describe("root route", () => {
     expect(await screen.findByRole("heading", { name: "Items" })).toBeTruthy();
     expect(screen.getByText("staging")).toBeTruthy();
     expect(await screen.findByText("ada")).toBeTruthy();
-    expect(await screen.findByText(/There are no items yet/)).toBeTruthy();
+    expect(await screen.findByText(/No items yet/)).toBeTruthy();
   });
 
   it("opens the command palette with the shortcut and lists the route and the app command", async () => {
@@ -46,6 +46,8 @@ describe("root route", () => {
     expect(screen.getByRole("option", { name: /Items/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /New item/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Open agent panel/ })).toBeTruthy();
+    // Apps follow the system colour scheme: there is no theme command.
+    expect(screen.queryByRole("option", { name: /theme/i })).toBeNull();
     fireEvent.keyDown(box, { key: "Escape" });
   });
 

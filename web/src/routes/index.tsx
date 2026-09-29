@@ -58,33 +58,35 @@ function ItemsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl text-ink">Items</h1>
+      <h1 className="display-lg text-ink">Items</h1>
 
-      <form onSubmit={form.handleSubmit} className="flex flex-col gap-3" noValidate>
+      <form onSubmit={form.handleSubmit} className="panel flex flex-col gap-3 p-4" noValidate>
         <Field label="Name" error={name.error} description="What to call the new item.">
           <Input ref={nameInput} value={name.value} onChange={(e) => name.onChange(e.target.value)} onBlur={name.onBlur} autoComplete="off" />
         </Field>
         <div>
-          <Button type="submit" intent="solid" loading={form.isSubmitting}>
-            <Plus aria-hidden size={16} />
+          <Button type="submit" intent="solid" icon={<Plus aria-hidden size={16} />} loading={form.isSubmitting}>
             Add item
           </Button>
         </div>
-        {submitProblem ? <p role="alert" className="text-sm text-danger">The item could not be saved. {describeError(submitProblem)}</p> : null}
+        {submitProblem ? <p role="alert" className="text-danger">The item could not be saved. {describeError(submitProblem)}</p> : null}
       </form>
 
       {items.isPending ? (
-        <p className="text-sm text-muted">Loading items.</p>
+        <p className="text-ink-muted">Loading items.</p>
       ) : items.error ? (
-        <p role="alert" className="text-sm text-danger">The items could not be loaded. {describeError(items.error)}</p>
+        <p role="alert" className="text-danger">The items could not be loaded. {describeError(items.error)}</p>
       ) : list.length === 0 ? (
-        <p className="text-sm text-muted">There are no items yet. Add the first one with the form above.</p>
+        <div className="flex flex-col gap-2 py-6">
+          <p className="display-lg text-ink">No items yet</p>
+          <p className="text-ink-muted">Add the first one with the form above.</p>
+        </div>
       ) : (
-        <ul className="flex flex-col">
+        <ul className="panel flex flex-col">
           {list.map((item) => (
-            <li key={item.id} className="flex items-baseline justify-between gap-4 border-b border-line py-2">
-              <span className="text-base text-ink">{item.name}</span>
-              <span className="text-sm text-muted">{fmtRelative(item.created_at)}</span>
+            <li key={item.id} className="flex items-baseline justify-between gap-4 border-b border-line px-4 py-2 last:border-b-0">
+              <span className="text-ink">{item.name}</span>
+              <span className="text-ink-faint">{fmtRelative(item.created_at)}</span>
             </li>
           ))}
         </ul>

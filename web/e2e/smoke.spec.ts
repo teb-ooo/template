@@ -97,7 +97,8 @@ test.describe("command palette", () => {
     const goTo = page.getByRole("group", { name: "Go to" }).getByRole("option");
     await expect(goTo).toHaveCount(navigable.length);
 
-    await expect(page.getByRole("option", { name: /Toggle theme/ })).toBeVisible();
+    // Apps follow the system colour scheme: the palette has no theme command and the header no theme control.
+    await expect(page.getByRole("option", { name: /theme/i })).toHaveCount(0);
     const agentPanel = page.getByRole("option", { name: /Open agent panel/ });
     if (env === "staging") await expect(agentPanel).toBeVisible();
     else await expect(agentPanel).toHaveCount(0);
@@ -116,6 +117,15 @@ test.describe("command palette", () => {
     await expect(input).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("there is no theme toggle anywhere in the app", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("header").getByText(/theme/i)).toHaveCount(0);
+    await expect(page.locator("header").getByRole("button", { name: /theme|dark|light/i })).toHaveCount(0);
+    await expect(page.locator("[aria-label*='theme' i], [data-testid*='theme' i]")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.hasAttribute("data-theme"))).toBe(false);
   });
 
   test("on a 390px wide screen the trigger opens a full-height sheet", async ({ page }) => {

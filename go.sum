@@ -65,8 +65,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/teb-ooo/factory-go v0.1.1 h1:f5MBGd4W+gPjmaBlKvB9f59NCGntk+JButnvae4pK5E=
-github.com/teb-ooo/factory-go v0.1.1/go.mod h1:tMheyJjiqUpf10wKVdA7wzkyg3iy+w46xeoWt4fx098=
+github.com/teb-ooo/factory-go v0.1.2 h1:D+YjMwhXiwej7UUCH+1f0KwM9tF4O/FAUDodob4eHyQ=
+github.com/teb-ooo/factory-go v0.1.2/go.mod h1:tMheyJjiqUpf10wKVdA7wzkyg3iy+w46xeoWt4fx098=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
 github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
