@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Blocks a commit that stages a secret. `factory new` points core.hooksPath at .githooks. (canary probe)
+# Blocks a commit that stages a secret. `factory new` points core.hooksPath at .githooks.
 set -euo pipefail
 command -v gitleaks >/dev/null || { echo "pre-commit: gitleaks is not installed" >&2; exit 1; }
 cfg="$(git rev-parse --show-toplevel)/.gitleaks.toml"
