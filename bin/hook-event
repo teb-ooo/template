@@ -5,8 +5,13 @@ kind="${1:-}"; payload="$(cat)"
 session="$(jq -r '.session_id // empty' <<<"$payload" 2>/dev/null)"
 summary="$(jq -r '.last_assistant_message // .prompt // empty' <<<"$payload" 2>/dev/null | head -c 200)"
 rules_commit="$(git -C /factory/rules rev-parse HEAD 2>/dev/null || true)"
-curl -s -m 3 -X POST "http://factoryd:9000/v1/events" -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${FACTORYD_TOKEN:-}" \
-  -d "$(jq -cn --arg app "${APP_NAME:-}" --arg kind "$kind" --arg session "$session" --arg summary "$summary" --arg rules "$rules_commit" \
-       '{app:$app, kind:$kind, session_id:$session, summary:$summary, rules_commit:$rules}')" >/dev/null 2>&1 || true
+body="$(jq -cn --arg app "${APP_NAME:-}" --arg kind "$kind" --arg session "$session" --arg summary "$summary" --arg rules "$rules_commit" \
+       '{app:$app, kind:$kind, session_id:$session, summary:$summary, rules_commit:$rules}')"
+post() { curl -s -m 3 -o /dev/null -w '%{http_code}' -X POST "http://factoryd:9000/v1/events" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${FACTORYD_TOKEN:-}" -d "$body" 2>/dev/null; }
+# First try in the foreground (hooks must be quick); when factoryd or the network is not up yet (a reboot starts the agent
+# before them), keep retrying in the background so the event is not lost.
+case "$(post)" in 2*) exit 0 ;; esac
+( for _ in $(seq 1 40); do sleep 5; case "$(post)" in 2*) exit 0 ;; esac; done ) >/dev/null 2>&1 &
+disown 2>/dev/null || true
 exit 0
