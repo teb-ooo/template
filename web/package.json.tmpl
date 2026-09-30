@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "gen:api": "(cd .. && go run ./cmd/server --print-openapi > web/openapi.json) && openapi-typescript openapi.json -o src/api/schema.d.ts",
+    "gen:api": "(cd .. && go run ./cmd/server --print-openapi > web/src/api/openapi.json) && openapi-typescript src/api/openapi.json -o src/api/schema.d.ts",
     "typecheck": "tsr generate && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",

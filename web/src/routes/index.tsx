@@ -6,7 +6,7 @@ import { Button, Field, Input } from "@teb-ooo/ui";
 import { RequireUser, createBodyValidator, fmtRelative, isApiError, useForm } from "@teb-ooo/web";
 import type { OpenApiDocument } from "@teb-ooo/web";
 import { Plus } from "lucide-react";
-import spec from "../../openapi.json";
+import spec from "../api/openapi.json";
 import { api } from "../api";
 import { describeError } from "../api/describe-error";
 
