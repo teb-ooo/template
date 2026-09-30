@@ -1,5 +1,5 @@
 -- +goose Up
--- The tables factory-go's assistant.PgxStore persists conversations in, scoped to the user.
+-- The tables playground-go's assistant.PgxStore persists conversations in, scoped to the user.
 -- IDs are UUIDv7, so ordering by id is ordering by time.
 CREATE TABLE assistant_conversations (
     id         uuid PRIMARY KEY,

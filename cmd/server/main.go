@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
-	factory "github.com/teb-ooo/factory-go"
-	factorylog "github.com/teb-ooo/factory-go/log"
+	playground "github.com/teb-ooo/playground-go"
+	playgroundlog "github.com/teb-ooo/playground-go/log"
 
 	"app/internal/api"
 	"app/migrations"
@@ -49,12 +49,12 @@ func run(args []string) error {
 		return printSpec(os.Stdout)
 	}
 
-	cfg, err := factory.LoadConfig()
+	cfg, err := playground.LoadConfig()
 	if err != nil {
 		return err
 	}
 	cfg.Version = version
-	slog.SetDefault(factorylog.Setup(slog.LevelInfo))
+	slog.SetDefault(playgroundlog.Setup(slog.LevelInfo))
 	slog.Info("starting", "config", cfg)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -133,7 +133,7 @@ func printSpec(w io.Writer) error {
 		"OIDC_CLIENT_ID": "openapi", "OIDC_CLIENT_SECRET": "openapi",
 		"SESSION_KEY": strings.Repeat("0", 64),
 	}
-	cfg, err := factory.FromEnv(func(k string) string {
+	cfg, err := playground.FromEnv(func(k string) string {
 		if k == "APP_NAME" && os.Getenv(k) != "" {
 			return os.Getenv(k)
 		}

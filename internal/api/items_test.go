@@ -16,19 +16,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
-	"github.com/teb-ooo/factory-go/auth"
-	"github.com/teb-ooo/factory-go/testkit"
+	"github.com/teb-ooo/playground-go/auth"
+	"github.com/teb-ooo/playground-go/testkit"
 
 	"app/migrations"
 )
 
-// testDatabase migrates a fresh schema of the throwaway database in FACTORY_TEST_DATABASE_URL and returns a
+// testDatabase migrates a fresh schema of the throwaway database in PLAYGROUND_TEST_DATABASE_URL and returns a
 // pool bound to it; the test is skipped when the variable is not set.
 func testDatabase(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	url := os.Getenv("FACTORY_TEST_DATABASE_URL")
+	url := os.Getenv("PLAYGROUND_TEST_DATABASE_URL")
 	if url == "" {
-		t.Skip("FACTORY_TEST_DATABASE_URL is not set")
+		t.Skip("PLAYGROUND_TEST_DATABASE_URL is not set")
 	}
 	ctx := context.Background()
 	schema := "t_" + strings.ReplaceAll(uuid.NewString(), "-", "")

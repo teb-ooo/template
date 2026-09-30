@@ -1,7 +1,7 @@
 # build output
 /bin/server
 /bin/server.new
-/bin/factory-mcp
+/bin/playground-mcp
 web/node_modules/
 web/dist/*
 !web/dist/.gitkeep
@@ -9,7 +9,7 @@ web/e2e/__screenshots__/
 web/test-results/
 web/playwright-report/
 # runtime
-.factory/
+.playground/
 *.env
 .env*
 tmp/

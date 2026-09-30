@@ -1,7 +1,7 @@
 # Secret scanning (BOOTSTRAP 4.6): the default gitleaks ruleset plus this app's allowlist.
 # A finding blocks the commit (pre-commit hook) and blocks promotion. Never allowlist a real secret:
-# rotate it instead (factory secrets set ...). Allowlist only clearly fake test values, by exact path.
-title = "factory app gitleaks config"
+# rotate it instead (playground secrets set ...). Allowlist only clearly fake test values, by exact path.
+title = "playground app gitleaks config"
 
 [extend]
 useDefault = true

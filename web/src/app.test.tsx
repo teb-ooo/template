@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
-import { createTestQueryClient, http, HttpResponse, setFactory, setupMswServer } from "@teb-ooo/web/testing";
+import { createTestQueryClient, http, HttpResponse, setPlayground, setupMswServer } from "@teb-ooo/web/testing";
 import { routeTree } from "./routeTree.gen";
 
 const user = { subject: "u1", email: "ada@example.com", username: "ada", groups: [], is_admin: false };
@@ -27,7 +27,7 @@ function renderApp(path: string) {
 
 describe("root route", () => {
   it("renders the header, the signed-in user and the empty state", async () => {
-    setFactory({ app_name: "sample", env: "staging" });
+    setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     expect(await screen.findByRole("heading", { name: "Items" })).toBeTruthy();
     expect(screen.getByText("staging")).toBeTruthy();
@@ -36,7 +36,7 @@ describe("root route", () => {
   });
 
   it("opens the command palette with the shortcut and lists the route and the app command", async () => {
-    setFactory({ app_name: "sample", env: "staging" });
+    setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Items" });
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });

@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	factory "github.com/teb-ooo/factory-go"
-	"github.com/teb-ooo/factory-go/openapimcp"
+	playground "github.com/teb-ooo/playground-go"
+	"github.com/teb-ooo/playground-go/openapimcp"
 )
 
 // testConfig is a valid staging configuration with throwaway credentials.
-func testConfig(t testing.TB, override map[string]string) factory.Config {
+func testConfig(t testing.TB, override map[string]string) playground.Config {
 	t.Helper()
 	env := map[string]string{
 		"APP_NAME": "app", "APP_ENV": "staging", "PUBLIC_URL": "http://localhost:8080",
@@ -25,7 +25,7 @@ func testConfig(t testing.TB, override map[string]string) factory.Config {
 	for k, v := range override {
 		env[k] = v
 	}
-	cfg, err := factory.FromEnv(func(k string) string { return env[k] })
+	cfg, err := playground.FromEnv(func(k string) string { return env[k] })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestOpenAPIHidesInfrastructureRoutes(t *testing.T) {
 }
 
 func TestSPAConfigAssistantFlag(t *testing.T) {
-	cfg := testConfig(t, map[string]string{"FACTORY_ASSISTANT": "true"})
+	cfg := testConfig(t, map[string]string{"PLAYGROUND_ASSISTANT": "true"})
 	if got := spaConfig(cfg).Assistant; got != assistantEnabled {
 		t.Fatalf("assistant flag = %v, want %v (set only by the overlay)", got, assistantEnabled)
 	}

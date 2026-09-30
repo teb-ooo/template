@@ -1,12 +1,12 @@
-# Files the factory owns in every app repository: each must equal the template's copy byte for byte.
-# The factory edits them directly (bin/sync-factory-files) and restarts the agent; an app never edits them.
+# Files the playground owns in every app repository: each must equal the template's copy byte for byte.
+# The playground edits them directly (bin/sync-playground-files) and restarts the agent; an app never edits them.
 # Paths are relative to the repository root. A path ending in a symlink is compared by its target.
-.factory-files
+.playground-files
 AGENTS.md
-.claude/rules/factory
+.claude/rules/playground
 .githooks/pre-commit
 .gitleaks.toml
-bin/factory-app
+bin/playground-app
 s6/app/run
 s6/app/type
 s6/claude/dependencies.d/app

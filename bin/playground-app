@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# factory-app restart | build | test | status
+# playground-app restart | build | test | status
 set -euo pipefail
 cd /app
 case "${1:-}" in
   build)
     (cd web && npm ci --silent && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
-    node /factory/rules/tools/check-no-eval.mjs web/dist
+    node /playground/rules/tools/check-no-eval.mjs web/dist
     # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
-    node /factory/rules/tools/check-no-dev.mjs web/dist
+    node /playground/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
     CGO_ENABLED=0 go build -o /app/bin/server.new ./cmd/server ;;
   test)
     # the npm release-age gate (BOOTSTRAP 7): the checker and canonical .npmrc live in the read-only rules mount
-    cmp -s /factory/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /factory/rules/npmrc: do not edit it" >&2; exit 1; }
-    node /factory/rules/tools/check-release-age.mjs web
+    cmp -s /playground/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /playground/rules/npmrc: do not edit it" >&2; exit 1; }
+    node /playground/rules/tools/check-release-age.mjs web
     go vet ./... && go test ./... ;;
   smoke)
     # Browser smoke test (BOOTSTRAP 9.12): Playwright drives the Chrome agent-browser installed.
@@ -36,5 +36,5 @@ case "${1:-}" in
     echo "up"
     "$0" smoke ;;
   status) s6-svstat /run/service/app /run/service/claude ;;
-  *) echo "usage: factory-app build|test|smoke|restart|status" >&2; exit 2 ;;
+  *) echo "usage: playground-app build|test|smoke|restart|status" >&2; exit 2 ;;
 esac

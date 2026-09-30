@@ -10,12 +10,12 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/jackc/pgx/v5/pgxpool"
-	factory "github.com/teb-ooo/factory-go"
-	"github.com/teb-ooo/factory-go/auth"
-	"github.com/teb-ooo/factory-go/health"
-	factorylog "github.com/teb-ooo/factory-go/log"
-	"github.com/teb-ooo/factory-go/openapimcp"
-	"github.com/teb-ooo/factory-go/spa"
+	playground "github.com/teb-ooo/playground-go"
+	"github.com/teb-ooo/playground-go/auth"
+	"github.com/teb-ooo/playground-go/health"
+	playgroundlog "github.com/teb-ooo/playground-go/log"
+	"github.com/teb-ooo/playground-go/openapimcp"
+	"github.com/teb-ooo/playground-go/spa"
 
 	"app/internal/db"
 	"app/web"
@@ -23,7 +23,7 @@ import (
 
 // Deps is what registration hooks receive.
 type Deps struct {
-	Cfg  factory.Config
+	Cfg  playground.Config
 	Pool *pgxpool.Pool
 	Mux  *http.ServeMux
 	API  huma.API
@@ -38,23 +38,23 @@ var registrations []func(*Deps)
 var mounts []func(*Deps)
 
 // assistantEnabled is set by the assistant overlay's init: only apps generated with the overlay tell the web
-// app that the assistant exists, whatever FACTORY_ASSISTANT says.
+// app that the assistant exists, whatever PLAYGROUND_ASSISTANT says.
 var assistantEnabled bool
 
-func spaConfig(cfg factory.Config) spa.Config {
+func spaConfig(cfg playground.Config) spa.Config {
 	c := cfg.SPA()
 	c.Assistant = assistantEnabled
 	return c
 }
 
 // New builds the whole application handler.
-func New(cfg factory.Config, pool *pgxpool.Pool) http.Handler {
+func New(cfg playground.Config, pool *pgxpool.Pool) http.Handler {
 	h, _, _ := build(cfg, pool)
 	return h
 }
 
 // build also returns the Huma API and the MCP handler, which the parity test needs.
-func build(cfg factory.Config, pool *pgxpool.Pool) (http.Handler, huma.API, http.Handler) {
+func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, http.Handler) {
 	authn, err := cfg.NewAuth()
 	if err != nil {
 		panic("api: " + err.Error())
@@ -82,7 +82,7 @@ func build(cfg factory.Config, pool *pgxpool.Pool) (http.Handler, huma.API, http
 	}
 	mux.Handle("/", spa.Handler(dist, spaConfig(cfg)))
 
-	return factorylog.Middleware(authn.Middleware(mux)), humaAPI, mcpH
+	return playgroundlog.Middleware(authn.Middleware(mux)), humaAPI, mcpH
 }
 
 // internalError logs the cause and returns a 500 that does not leak it.

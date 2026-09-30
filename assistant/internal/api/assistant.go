@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/teb-ooo/factory-go/assistant"
+	"github.com/teb-ooo/playground-go/assistant"
 )
 
 // Assistant overlay: mounts the end-user assistant at /api/assistant/ with conversations stored in the
@@ -16,7 +16,7 @@ func init() {
 
 func mountAssistant(d *Deps) {
 	if !d.Cfg.AssistantEnabled() {
-		mountAssistantOff(d, "the assistant is not configured: no API key is set for this app (factory secrets set "+d.Cfg.AppName+" ANTHROPIC_API_KEY)")
+		mountAssistantOff(d, "the assistant is not configured: no API key is set for this app (playground secrets set "+d.Cfg.AppName+" ANTHROPIC_API_KEY)")
 		return
 	}
 	h, err := assistant.New(d.API, d.Mux, d.Cfg.AssistantOptions(assistant.NewPgxStore(d.Pool)))

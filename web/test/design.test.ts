@@ -1,5 +1,5 @@
 /**
- * The factory's design-language test.
+ * The playground's design-language test.
  *
  * Copy-ready: the same file lives at `lib/ui/test/design.test.ts` and at an app's `web/test/design.test.ts`.
  * It scans every .ts/.tsx/.css file under `../src` (relative to this file) and fails on anything that steps

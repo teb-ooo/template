@@ -1,5 +1,5 @@
 // Command mintsession prints a signed session cookie ("name=value") for a test admin, for the Playwright smoke
-// test (factory-app smoke). It reads SESSION_KEY like the app does and refuses to run with APP_ENV=production
+// test (playground-app smoke). It reads SESSION_KEY like the app does and refuses to run with APP_ENV=production
 // (testkit.Guard). Not part of the production image: the Dockerfile builds ./cmd/server only.
 package main
 
@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/teb-ooo/factory-go/auth"
-	"github.com/teb-ooo/factory-go/testkit"
+	"github.com/teb-ooo/playground-go/auth"
+	"github.com/teb-ooo/playground-go/testkit"
 )
 
 func main() {

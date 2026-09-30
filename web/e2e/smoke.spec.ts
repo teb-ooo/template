@@ -114,8 +114,8 @@ test.describe("command palette", () => {
   test("opens with Ctrl+K, lists routes and built-ins, runs the create-item command, closes with Esc", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    const factory = await page.evaluate(() => window.__FACTORY__ ?? {});
-    const claudeUrl = typeof factory.claude_session_url === "string" ? factory.claude_session_url : "";
+    const playground = await page.evaluate(() => window.__PLAYGROUND__ ?? {});
+    const claudeUrl = typeof playground.claude_session_url === "string" ? playground.claude_session_url : "";
 
     await page.keyboard.press("Control+K");
     const input = page.getByRole("combobox", { name: "Search commands" });

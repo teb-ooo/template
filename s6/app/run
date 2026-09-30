@@ -2,7 +2,7 @@
 # The app binary. Environment comes from the container (S6_KEEP_ENV=1).
 export HOME=/home/agent USER=agent LOGNAME=agent
 cd /app
-mkdir -p /app/bin /app/.factory
-[ -x /app/bin/server ] || { cp /opt/factory/server /app/bin/server && chown agent:agent /app/bin/server; }
-chown agent:agent /app/.factory 2>/dev/null || true
+mkdir -p /app/bin /app/.playground
+[ -x /app/bin/server ] || { cp /opt/playground/server /app/bin/server && chown agent:agent /app/bin/server; }
+chown agent:agent /app/.playground 2>/dev/null || true
 exec s6-setuidgid agent /app/bin/server

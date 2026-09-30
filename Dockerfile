@@ -7,7 +7,7 @@ RUN npm install -g npm@${NPM_VERSION}
 WORKDIR /src/web
 COPY web/package*.json web/.npmrc ./
 # @teb-ooo/* comes from the internal registry (web/.npmrc, no credentials; ADR 0012). The build is given an
-# `npm-registry` host entry by factoryd (build.extra_hosts) because builds run on the default bridge network.
+# `npm-registry` host entry by playd (build.extra_hosts) because builds run on the default bridge network.
 RUN npm ci
 COPY web/ ./
 RUN npm run build                      # -> /src/web/dist
@@ -19,7 +19,7 @@ FROM golang:1.27-bookworm AS build
 ENV GOPRIVATE=github.com/teb-ooo/*
 WORKDIR /src
 COPY go.mod go.sum ./
-# The netrc build secret lets `go mod download` fetch the private factory-go module.
+# The netrc build secret lets `go mod download` fetch the private playground-go module.
 RUN --mount=type=secret,id=netrc,target=/root/.netrc go mod download
 COPY . .
 COPY --from=web /src/web/dist ./web/dist
@@ -55,9 +55,9 @@ ENV PATH="/usr/local/go/bin:/usr/local/node/bin:/home/agent/.local/bin:/home/age
 RUN /usr/local/node/bin/npm install -g --prefix /usr/local/node npm@${NPM_VERSION} && /usr/local/node/bin/npm config ls -l | grep -q '^min-release-age'
 # Both ubuntu:24.04 and 26.04 ship a stock `ubuntu` user at uid 1000: delete it first (ADR 0003).
 RUN userdel -r ubuntu && useradd -m -u 1000 -s /bin/bash agent
-# The private Go module (factory-go) comes from a module cache baked at image build: staging containers hold no
+# The private Go module (playground-go) comes from a module cache baked at image build: staging containers hold no
 # GitHub credentials (ADR 0011). @teb-ooo/* npm packages are read from the internal registry at runtime, which
-# needs no credentials (ADR 0012). `factory rebuild` refreshes the baked Go cache.
+# needs no credentials (ADR 0012). `playground rebuild` refreshes the baked Go cache.
 COPY --from=build --chown=1000:1000 /go/pkg/mod /home/agent/go/pkg/mod
 COPY web/.npmrc /tmp/npmrc
 RUN cp /tmp/npmrc /home/agent/.npmrc && chown 1000:1000 /home/agent/.npmrc && rm /tmp/npmrc
@@ -88,15 +88,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends sudo \
 RUN bd metrics off
 USER agent
 RUN agent-browser install   # per-user browser cache for the agent user
-COPY --chown=agent bin/factory-mcp /usr/local/bin/factory-mcp
+COPY --chown=agent bin/playground-mcp /usr/local/bin/playground-mcp
 USER root
 COPY s6/ /etc/s6-overlay/s6-rc.d/
-COPY bin/factory-app /usr/local/bin/factory-app
-# claude-start, the hooks and hook-event are factory-owned and arrive read-only at /opt/factory-kit (composegen mounts
-# FACTORY_ROOT/agent-kit), never from the app repository. This shim is all the image holds of them.
-RUN printf '#!/bin/sh\nexec /opt/factory-kit/bin/claude-start "$@"\n' > /usr/local/bin/claude-start && chmod 755 /usr/local/bin/claude-start
+COPY bin/playground-app /usr/local/bin/playground-app
+# claude-start, the hooks and hook-event are playground-owned and arrive read-only at /opt/playground-kit (composegen mounts
+# PLAYGROUND_ROOT/agent-kit), never from the app repository. This shim is all the image holds of them.
+RUN printf '#!/bin/sh\nexec /opt/playground-kit/bin/claude-start "$@"\n' > /usr/local/bin/claude-start && chmod 755 /usr/local/bin/claude-start
 # /app is bind-mounted over the image at runtime, so ship the first binary outside it (copied in by the app service).
-COPY --from=build /out/server /opt/factory/server
+COPY --from=build /out/server /opt/playground/server
 ENV S6_KEEP_ENV=1 S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 WORKDIR /app
 ENTRYPOINT ["/init"]

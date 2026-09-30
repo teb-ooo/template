@@ -184,7 +184,7 @@
       "session": {
         "description": "Session cookie set by /auth/callback.",
         "in": "cookie",
-        "name": "factory_session",
+        "name": "playground_session",
         "type": "apiKey"
       }
     }

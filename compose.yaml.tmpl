@@ -11,10 +11,10 @@ services:
         CLAUDE_CODE_VERSION: "{{claude_version}}"
         AGENT_BROWSER_VERSION: "{{agent_browser_version}}"
       extra_hosts:
-        - "npm-registry:${NPM_REGISTRY_BRIDGE_IP}"    # builds run on the default bridge; factoryd supplies the registry's bridge IP (ADR 0012)
+        - "npm-registry:${NPM_REGISTRY_BRIDGE_IP}"    # builds run on the default bridge; playd supplies the registry's bridge IP (ADR 0012)
       secrets: [netrc]
     hostname: {{name}}-staging
-    env_file: /run/factory/env/{{name}}-staging.env     # written by factoryd to a tmpfs at start
+    env_file: /run/playground/env/{{name}}-staging.env     # written by playd to a tmpfs at start
     environment:
       APP_NAME: {{name}}
       APP_ENV: staging
@@ -24,12 +24,12 @@ services:
       BEADS_DOLT_SERVER_PORT: "3306"
       BEADS_DOLT_AUTO_START: "0"
     volumes:
-      - /srv/factory/apps/{{name}}:/app
-      - /srv/factory/data/apps/{{name}}-staging:/data
-      - /srv/factory/claude/apps/{{name}}:/home/agent/.claude
-      - /srv/factory/claude/apps/{{name}}.json:/home/agent/.claude.json
-      - /srv/factory/rules:/factory/brain:ro
-      - /srv/factory/rules/rules:/factory/rules:ro
+      - /srv/playground/apps/{{name}}:/app
+      - /srv/playground/data/apps/{{name}}-staging:/data
+      - /srv/playground/claude/apps/{{name}}:/home/agent/.claude
+      - /srv/playground/claude/apps/{{name}}.json:/home/agent/.claude.json
+      - /srv/playground/rules:/playground/brain:ro
+      - /srv/playground/rules/rules:/playground/rules:ro
     networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
@@ -41,16 +41,16 @@ services:
     shm_size: 512m                      # Chrome needs more than Docker's 64 MB default /dev/shm
   production:
     container_name: {{name}}
-    image: {{name}}:production          # built by factory promote from a tag
-    user: "1000:1000"                   # the distroless image's nonroot uid cannot write the /data volume owned by the factory user
+    image: {{name}}:production          # built by playground promote from a tag
+    user: "1000:1000"                   # the distroless image's nonroot uid cannot write the /data volume owned by the playground user
     hostname: {{name}}
-    env_file: /run/factory/env/{{name}}.env
+    env_file: /run/playground/env/{{name}}.env
     environment:
       APP_NAME: {{name}}
       APP_ENV: production
       PUBLIC_URL: https://{{name}}.{{domain}}
     volumes:
-      - /srv/factory/data/apps/{{name}}:/data
+      - /srv/playground/data/apps/{{name}}:/data
     networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
@@ -62,4 +62,4 @@ services:
     cpus: "2"
     profiles: [production]              # not started until first promote
 secrets:
-  netrc: { file: /run/factory/netrc }
+  netrc: { file: /run/playground/netrc }

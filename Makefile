@@ -1,4 +1,4 @@
-# Common tasks. In the staging container use `factory-app restart` to rebuild and restart.
+# Common tasks. In the staging container use `playground-app restart` to rebuild and restart.
 .PHONY: gen test build web run
 
 gen:            ## regenerate database code and API types

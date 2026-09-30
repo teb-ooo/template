@@ -9,7 +9,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/teb-ooo/factory-go/auth"
+	"github.com/teb-ooo/playground-go/auth"
 
 	"app/internal/db"
 )

@@ -2,7 +2,7 @@ import { Link, Outlet, createRootRouteWithContext, useRouter } from "@tanstack/r
 import type { QueryClient } from "@tanstack/react-query";
 import { CommandProvider, CommandTrigger } from "@teb-ooo/cmdk";
 import { Avatar, Chip, LinkButton } from "@teb-ooo/ui";
-import { factory, isForbiddenError, useUser } from "@teb-ooo/web";
+import { playground, isForbiddenError, useUser } from "@teb-ooo/web";
 import { Bot, LogIn, LogOut, MessageCircle } from "lucide-react";
 import { describeError } from "../api/describe-error";
 
@@ -36,7 +36,7 @@ function RootLayout() {
 function AppHeader() {
   const { user, isLoading } = useUser();
   const router = useRouter();
-  const name = factory.appName || "app";
+  const name = playground.appName || "app";
   const next = encodeURIComponent(window.location.pathname + window.location.search);
 
   return (
@@ -44,10 +44,10 @@ function AppHeader() {
       <Link to="/" className="text-ink">
         {name}
       </Link>
-      {factory.env === "staging" ? <Chip tone="warn">staging</Chip> : null}
+      {playground.env === "staging" ? <Chip tone="warn">staging</Chip> : null}
       <div className="flex-1" />
       <CommandTrigger />
-      {factory.assistant ? (
+      {playground.assistant ? (
         <LinkButton
           href="/assistant"
           icon={<MessageCircle aria-hidden size={16} />}
@@ -61,8 +61,8 @@ function AppHeader() {
           <span className="max-sm:sr-only">Assistant</span>
         </LinkButton>
       ) : null}
-      {factory.claudeSessionUrl ? (
-        <LinkButton href={factory.claudeSessionUrl} target="_blank" rel="noreferrer" icon={<Bot aria-hidden size={16} />}>
+      {playground.claudeSessionUrl ? (
+        <LinkButton href={playground.claudeSessionUrl} target="_blank" rel="noreferrer" icon={<Bot aria-hidden size={16} />}>
           <span className="max-sm:sr-only">Claude</span>
         </LinkButton>
       ) : null}
