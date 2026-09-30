@@ -1,6 +1,6 @@
 import { Link, Outlet, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { CommandProvider, CommandTrigger } from "@teb-ooo/cmdk";
+import { CommandProvider, CommandTrigger } from "@teb-ooo/ui/cmdk";
 import { Avatar, Chip, LinkButton } from "@teb-ooo/ui";
 import { playground, isForbiddenError, useUser } from "@teb-ooo/web";
 import { Bot, LogIn, LogOut, MessageCircle } from "lucide-react";

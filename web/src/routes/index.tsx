@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRegisterCommands } from "@teb-ooo/cmdk";
+import { useRegisterCommands } from "@teb-ooo/ui/cmdk";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Field, Input } from "@teb-ooo/ui";
 import { RequireUser, createBodyValidator, fmtRelative, isApiError, useForm } from "@teb-ooo/web";

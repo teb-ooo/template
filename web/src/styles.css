@@ -1,5 +1,4 @@
 @import "@teb-ooo/ui/theme.css";
-@import "@teb-ooo/cmdk/source.css";
 
 /* Layout belongs to the app; colours, type and radii come only from the theme. */
 html, body, #root { height: 100%; }
