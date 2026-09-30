@@ -13,7 +13,7 @@ web:
 	cd web && npm ci && npm run build
 
 build: web
-	CGO_ENABLED=0 go build -o bin/server ./cmd/server
+	CGO_ENABLED=0 go build -ldflags "-X main.version=$$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o bin/server ./cmd/server
 
 run: build
 	./bin/server

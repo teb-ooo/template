@@ -17,13 +17,15 @@ RUN if grep -rIlE '/@vite/client|@react-refresh|RefreshRuntime|vite/dist/client|
 
 FROM golang:1.27-bookworm AS build
 ENV GOPRIVATE=github.com/teb-ooo/*
+# The promoted tag, stamped into main.version (reported by /healthz); promote passes it.
+ARG APP_VERSION=dev
 WORKDIR /src
 COPY go.mod go.sum ./
 # The netrc build secret lets `go mod download` fetch the private playground-go module.
 RUN --mount=type=secret,id=netrc,target=/root/.netrc go mod download
 COPY . .
 COPY --from=web /src/web/dist ./web/dist
-RUN CGO_ENABLED=0 go build -o /out/server ./cmd/server
+RUN CGO_ENABLED=0 go build -ldflags "-X main.version=${APP_VERSION}" -o /out/server ./cmd/server
 
 FROM gcr.io/distroless/static-debian12:nonroot AS production
 COPY --from=build /out/server /server
