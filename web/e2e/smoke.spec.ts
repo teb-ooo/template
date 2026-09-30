@@ -209,3 +209,21 @@ test.describe("390px", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
+
+// Desktops: the app is a real desktop interface too (owner decision 2026-09-30), not a stretched phone layout.
+// At 1280 and 1920 the header stays on one row and the page does not scroll sideways; app-specific desktop layout tests
+// (sidebar, tables, detail panes) belong next to the screens that have them.
+for (const width of [1280, 1920]) {
+  test.describe(`${width}px`, () => {
+    test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
+    test.use({ viewport: { width, height: 900 } });
+
+    test("the header does not wrap and nothing overflows", async ({ page }) => {
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      const header = await page.locator("header").boundingBox();
+      expect(header?.height ?? Infinity).toBeLessThan(60);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    });
+  });
+}
