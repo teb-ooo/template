@@ -71,4 +71,51 @@ describe("root route", () => {
     renderApp("/");
     expect(await screen.findByRole("status", { name: "Live" })).toBeTruthy();
   });
+
+  // The feedback tool: "Send feedback" is in Cmd+K only for the superadmin or the app's owner (/auth/me), never for
+  // anybody else. (navigator.webdriver is not set in jsdom, so this is the person check alone.)
+  async function paletteHas(me: Record<string, unknown>) {
+    server.use(http.get("*/auth/me", () => HttpResponse.json({ ...user, ...me })));
+    setPlayground({ app_name: "sample", env: "staging" });
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Home" });
+    await screen.findByText("ada");
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    const box = await screen.findByRole("combobox");
+    await screen.findByRole("option", { name: /Home/ });
+    const found = screen.queryByRole("option", { name: /send feedback/i }) !== null;
+    fireEvent.keyDown(box, { key: "Escape" });
+    return found;
+  }
+
+  it("offers Send feedback in the palette to the app's owner", async () => {
+    expect(await paletteHas({ is_owner: true })).toBe(true);
+  });
+
+  it("offers Send feedback in the palette to the superadmin", async () => {
+    expect(await paletteHas({ is_admin: true })).toBe(true);
+  });
+
+  it("does not offer Send feedback to anybody else", async () => {
+    expect(await paletteHas({})).toBe(false);
+    cleanup();
+    expect(await paletteHas({ is_owner: false, is_admin: false })).toBe(false);
+  });
+
+  it("has no feedback button in the header", async () => {
+    server.use(http.get("*/auth/me", () => HttpResponse.json({ ...user, is_owner: true })));
+    setPlayground({ app_name: "sample", env: "staging" });
+    renderApp("/");
+    await screen.findByText("ada");
+    expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
+  });
+
+  it("is off under a test browser (navigator.webdriver)", async () => {
+    Object.defineProperty(navigator, "webdriver", { value: true, configurable: true });
+    try {
+      expect(await paletteHas({ is_owner: true })).toBe(false);
+    } finally {
+      Reflect.deleteProperty(navigator, "webdriver");
+    }
+  });
 });

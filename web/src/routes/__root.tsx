@@ -1,8 +1,8 @@
 import { Link, Outlet, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
-import { CommandProvider, CommandTrigger } from "@teb-ooo/ui/cmdk";
-import { Avatar, Chip, LinkButton, LiveIndicator, type LiveStatus } from "@teb-ooo/ui";
-import { playground, isForbiddenError, useLive, useUser } from "@teb-ooo/web";
+import { CommandProvider, CommandTrigger, useFeedbackCommand } from "@teb-ooo/ui/cmdk";
+import { Avatar, Chip, FeedbackPanel, LinkButton, LiveIndicator, type LiveStatus } from "@teb-ooo/ui";
+import { playground, isForbiddenError, useFeedback, useLive, useUser } from "@teb-ooo/web";
 import { Bot, LogIn, LogOut, MessageCircle } from "lucide-react";
 import { describeError } from "../api/describe-error";
 
@@ -27,13 +27,27 @@ function RootLayout() {
   // "Go to" entries). Never remove it (BOOTSTRAP 9.7c).
   return (
     <CommandProvider>
+      <RootBody live={status} />
+    </CommandProvider>
+  );
+}
+
+function RootBody({ live }: { live: LiveStatus }) {
+  // The feedback tool (push-and-feedback.md): "Send feedback" in Cmd+K, only for the owner (is_admin or is_owner from
+  // /auth/me), never under a test browser (navigator.webdriver). There is no header button. It must sit inside the
+  // CommandProvider, the router and the query provider, so it is a child of the provider.
+  const feedback = useFeedback();
+  useFeedbackCommand(feedback);
+  return (
+    <>
       <div className="flex min-h-full flex-col">
-        <AppHeader live={status} />
+        <AppHeader live={live} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
           <Outlet />
         </main>
       </div>
-    </CommandProvider>
+      <FeedbackPanel feedback={feedback} />
+    </>
   );
 }
 
