@@ -121,7 +121,10 @@ export interface components {
              * @description Creation time, RFC 3339 UTC.
              */
             created_at: string;
-            /** @description Item id (UUIDv7). */
+            /**
+             * Format: uuid
+             * @description Item id (UUIDv7).
+             */
             id: string;
             /** @description Display name. */
             name: string;
