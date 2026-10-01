@@ -6,10 +6,13 @@
  * outside the design system: one typeface, one body size, one display size, one radius, semantic tokens only.
  *
  * Inside the @teb-ooo/ui package (detected through ../package.json) `../theme.css` is also scanned, and it is
- * the ONE file allowed to name palette values. In an app there is no exemption: every file uses semantic tokens.
+ * the ONE file allowed to name palette values. In an app the one file allowed to name colours directly (palette steps
+ * such as rose-500, hex and colour functions, neutral-) is `web/src/colors.css`, matched by its exact path; every other
+ * file, including another `colors.css` anywhere else, uses semantic tokens.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,6 +33,9 @@ const IS_UI_PACKAGE = readPackageName() === "@teb-ooo/ui";
 /** The only file that may name palette values, and only inside the ui package. */
 const THEME_FILE = "theme.css";
 const THEME_PATH = join(PACKAGE_ROOT, THEME_FILE);
+
+/** In an app: the one file (path relative to web/, exact match) that may name colours directly. */
+const COLORS_FILE = "src/colors.css";
 
 const SKIP_DIRS = new Set(["node_modules", "generated"]);
 
@@ -56,6 +62,10 @@ const isTheme = (f: string): boolean => IS_UI_PACKAGE && f === THEME_PATH;
 const isComponentSource = (f: string): boolean =>
   IS_UI_PACKAGE && f.includes(`${sep}components${sep}`) && !/\.stories\.tsx$/.test(f);
 const shown = (f: string): string => relative(PACKAGE_ROOT, f);
+/** Exact, path-relative match: `web/src/colors.css` only (not a prefix, a glob, or a nested or renamed file). */
+const allowsColours = (rel: string, isUiPackage: boolean): boolean =>
+  !isUiPackage && rel.split(sep).join("/") === COLORS_FILE;
+const isColours = (f: string): boolean => allowsColours(shown(f), IS_UI_PACKAGE);
 
 interface Hit {
   file: string;
@@ -83,6 +93,8 @@ function expectNone(hits: Hit[], why: string): void {
     why,
   ).toEqual([]);
 }
+
+const skipColours = (f: string): boolean => isTheme(f) || isColours(f);
 
 const PALETTES = "stone|neutral|gray|zinc|slate|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 
@@ -121,9 +133,9 @@ describe("design language", () => {
   });
 
   it("uses no neutral- scale, no important, and no near-white text steps", () => {
-    expectNone(find(/neutral-/), "the neutrals are semantic tokens (ink, ink-muted, ink-faint)");
+    expectNone(find(/neutral-/, { skip: isColours }), "the neutrals are semantic tokens (ink, ink-muted, ink-faint)");
     expectNone(find(/!important/), "no !important");
-    expectNone(find(/text-(neutral|stone)-(100|200)\b/), "use text-ink");
+    expectNone(find(/text-(neutral|stone)-(100|200)\b/, { skip: isColours }), "use text-ink");
   });
 
   it("has no dark: variants: tokens carry both themes", () => {
@@ -157,16 +169,16 @@ describe("design language", () => {
     expectNone(hits, "native title tooltips are banned; use tip");
   });
 
-  it("names no palette step in any file except theme.css", () => {
+  it("names no palette step in any file except theme.css and web/src/colors.css", () => {
     expectNone(
-      find(new RegExp(`(?<!\\w)(${PALETTES})-\\d{2,3}\\b`), { skip: isTheme }),
+      find(new RegExp(`(?<!\\w)(${PALETTES})-\\d{2,3}\\b`), { skip: skipColours }),
       "use semantic tokens (bg-surface, text-ink-muted, border-line, text-danger, ...)",
     );
   });
 
-  it("has no hex, rgb, hsl or oklch literal in any file except theme.css", () => {
-    expectNone(find(/(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, { skip: isTheme }), "no hex literals");
-    expectNone(find(/\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/, { skip: isTheme }), "no colour functions");
+  it("has no hex, rgb, hsl or oklch literal in any file except theme.css and web/src/colors.css", () => {
+    expectNone(find(/(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, { skip: skipColours }), "no hex literals");
+    expectNone(find(/\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/, { skip: skipColours }), "no colour functions");
   });
 
   it("mentions no other product by name", () => {
@@ -186,6 +198,58 @@ describe("design language", () => {
           });
       }
       expectNone(hits, "package files name no other product");
+    }
+  });
+});
+
+/** The colour rules, applied to files given as {path relative to web/, text}: the same regexes as above. */
+function colourHits(entries: { rel: string; text: string }[], isUiPackage = false): string[] {
+  const palette = new RegExp(`(?<!\\w)(${PALETTES})-\\d{2,3}\\b`);
+  const rules = [palette, /neutral-/, /(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, /\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/];
+  return entries.flatMap((e) =>
+    allowsColours(e.rel, isUiPackage) ? [] : rules.filter((re) => re.test(e.text)).map(() => e.rel),
+  );
+}
+
+describe("direct colours are allowed in web/src/colors.css only", () => {
+  const sample = ":root { --brand: var(--color-rose-500); --x: oklch(0.6 0.2 20); --y: #ff0000; } .a { color: neutral-500; }\n.b { @apply bg-rose-500; }";
+  const at = (rel: string, text = sample): string[] => colourHits([{ rel, text }]);
+
+  it("passes a palette name, hex, colour function and neutral- in web/src/colors.css", () => {
+    expect(at("src/colors.css")).toEqual([]);
+    expect(at(["src", "colors.css"].join(sep))).toEqual([]);
+  });
+
+  it("fails the same text in a .tsx, another .css, a nested colors.css and look-alike names", () => {
+    for (const rel of ["src/Card.tsx", "src/index.css", "src/x/colors.css", "src/colors.css.bak", "src/Colors.css", "src/mycolors.css", "colors.css", "src/colors.ts"]) {
+      expect(at(rel).length, rel).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps semantic names and ramp utilities passing everywhere", () => {
+    const ok = 'className="bg-surface text-ink-muted border-line text-danger bg-danger-100 text-accent-700"';
+    expect(at("src/Card.tsx", ok)).toEqual([]);
+    expect(at("src/colors.css", ok)).toEqual([]);
+  });
+
+  it("does not apply inside the ui package", () => {
+    expect(colourHits([{ rel: "src/colors.css", text: sample }], true).length).toBeGreaterThan(0);
+  });
+
+  it("scans a real tree: colors.css passes, nested colors.css and .tsx fail", () => {
+    const dir = mkdtempSync(join(tmpdir(), "design-"));
+    try {
+      const write = (rel: string): void => {
+        mkdirSync(dirname(join(dir, rel)), { recursive: true });
+        writeFileSync(join(dir, rel), "a { color: var(--color-rose-500); }\n");
+      };
+      for (const rel of ["src/colors.css", "src/x/colors.css", "src/App.tsx", "src/other.css"]) write(rel);
+      const found: string[] = [];
+      walk(join(dir, "src"), found);
+      const entries = found.map((f) => ({ rel: relative(dir, f), text: readFileSync(f, "utf8") }));
+      expect([...new Set(colourHits(entries))].sort()).toEqual([join("src", "App.tsx"), join("src", "other.css"), join("src", "x", "colors.css")].sort());
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
