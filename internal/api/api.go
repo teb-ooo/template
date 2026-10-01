@@ -13,6 +13,7 @@ import (
 	playground "github.com/teb-ooo/playground-go"
 	"github.com/teb-ooo/playground-go/auth"
 	"github.com/teb-ooo/playground-go/health"
+	"github.com/teb-ooo/playground-go/live"
 	playgroundlog "github.com/teb-ooo/playground-go/log"
 	"github.com/teb-ooo/playground-go/openapimcp"
 	"github.com/teb-ooo/playground-go/spa"
@@ -28,6 +29,10 @@ type Deps struct {
 	Mux  *http.ServeMux
 	API  huma.API
 	Q    *db.Queries
+	// Hub tells every open screen that a resource changed (rule WEB-50). After a successful create, update or
+	// delete call d.Hub.Publish("widgets", live.Everyone()); the resource name is the first path segment after
+	// /api/ ("widgets" for /api/widgets and /api/widgets/{id}). The stream itself, GET /api/live, is mounted below.
+	Hub *live.Hub
 }
 
 // registrations run before the MCP handler is built: they register operations.
@@ -65,7 +70,10 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 	authn.Register(humaAPI, mux)
 	health.Register(humaAPI, pool, cfg.Version, health.WithEnv(cfg.Env))
 
-	d := &Deps{Cfg: cfg, Pool: pool, Mux: mux, API: humaAPI, Q: db.New(pool)}
+	d := &Deps{Cfg: cfg, Pool: pool, Mux: mux, API: humaAPI, Q: db.New(pool), Hub: live.NewHub()}
+	// A plain mux handler, not an operation: the OpenAPI document, the MCP tools and the parity check never see it.
+	// authn.Middleware (below) puts the signed-in person in the context; a signed-out call answers 401 problem+json.
+	live.Mount(mux, d.Hub)
 	for _, register := range registrations {
 		register(d)
 	}

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
@@ -8,9 +8,11 @@ import { routeTree } from "./routeTree.gen";
 const user = { subject: "u1", email: "ada@example.com", username: "ada", groups: [], is_admin: false };
 
 afterEach(cleanup);
+// useLive() reads ?live= from the window: keep the stream off unless a test turns it on (jsdom is not a test browser).
+beforeEach(() => window.history.replaceState(null, "", "/?live=0"));
 window.scrollTo = () => undefined; // jsdom does not implement it; the router calls it on navigation
 
-setupMswServer(
+const server = setupMswServer(
   http.get("*/auth/me", () => HttpResponse.json(user)),
 );
 
@@ -49,4 +51,24 @@ describe("root route", () => {
     fireEvent.keyDown(box, { key: "Escape" });
   });
 
+  it("shows the live indicator next to the staging label: not live while the stream is off", async () => {
+    setPlayground({ app_name: "sample", env: "staging" });
+    renderApp("/");
+    await screen.findByRole("heading", { name: "Home" });
+    const dot = screen.getByRole("status", { name: "Not live" });
+    expect(dot.previousElementSibling?.textContent).toBe("staging");
+  });
+
+  it("reports live once /api/live answers with an event stream", async () => {
+    window.history.replaceState(null, "", "/?live=1");
+    server.use(
+      http.get("*/api/live", () => {
+        const body = new ReadableStream({ start: (c) => c.enqueue(new TextEncoder().encode(": live\n\n")) });
+        return new HttpResponse(body, { headers: { "Content-Type": "text/event-stream" } });
+      }),
+    );
+    setPlayground({ app_name: "sample", env: "staging" });
+    renderApp("/");
+    expect(await screen.findByRole("status", { name: "Live" })).toBeTruthy();
+  });
 });

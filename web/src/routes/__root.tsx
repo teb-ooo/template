@@ -1,8 +1,8 @@
 import { Link, Outlet, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { CommandProvider, CommandTrigger } from "@teb-ooo/ui/cmdk";
-import { Avatar, Chip, LinkButton } from "@teb-ooo/ui";
-import { playground, isForbiddenError, useUser } from "@teb-ooo/web";
+import { Avatar, Chip, LinkButton, LiveIndicator, type LiveStatus } from "@teb-ooo/ui";
+import { playground, isForbiddenError, useLive, useUser } from "@teb-ooo/web";
 import { Bot, LogIn, LogOut, MessageCircle } from "lucide-react";
 import { describeError } from "../api/describe-error";
 
@@ -19,12 +19,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 const textLink = "text-ink-muted underline";
 
 function RootLayout() {
+  // Live data (rule WEB-50): the server tells this screen which resource changed (GET /api/live) and the generated
+  // queries under it refetch. Call useLive() once, here at the root; it is off by itself under a test browser
+  // (navigator.webdriver, or ?live=0). A screen that polls can stop while `status` is "live".
+  const { status } = useLive();
   // The provider lives in the root route component, so it is inside the router (it reads the router for the
   // "Go to" entries). Never remove it (BOOTSTRAP 9.7c).
   return (
     <CommandProvider>
       <div className="flex min-h-full flex-col">
-        <AppHeader />
+        <AppHeader live={status} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
           <Outlet />
         </main>
@@ -33,7 +37,7 @@ function RootLayout() {
   );
 }
 
-function AppHeader() {
+function AppHeader({ live }: { live: LiveStatus }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const name = playground.appName || "app";
@@ -45,6 +49,7 @@ function AppHeader() {
         {name}
       </Link>
       {playground.env === "staging" ? <Chip tone="warn">staging</Chip> : null}
+      <LiveIndicator status={live} />
       <div className="flex-1" />
       <CommandTrigger />
       {playground.assistant ? (

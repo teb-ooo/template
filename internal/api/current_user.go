@@ -2,6 +2,11 @@
 // the playground-owned contract tests (TestContractAuth) require, and it shows the minimum of an operation (Security,
 // auth.Require first). The schema starts empty; add the app's first resource next to this file and delete this one
 // once the app has an operation of its own (see the worked example in the platform docs).
+//
+// This one only reads, so it publishes nothing. An operation that writes (create, update, delete) calls
+// d.Hub.Publish("<resource>", live.Everyone()) after the write succeeded, so every open screen refreshes without a
+// reload (rule WEB-50; the resource is the first path segment after /api/). Pick the narrowest audience that fits:
+// live.Subject(sub) for one person's own data, live.Admins() for admin-only data. See docs/live-data.md.
 package api
 
 import (

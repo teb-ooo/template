@@ -38,3 +38,4 @@ internal/api/contract_imports_test.go
 internal/api/contract_sql_test.go
 internal/api/contract_migrations_test.go
 internal/api/contract_errors_test.go
+internal/api/contract_live_test.go

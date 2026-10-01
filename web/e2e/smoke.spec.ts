@@ -135,6 +135,9 @@ test.describe("command palette", () => {
     else await expect(claudeApp).toHaveCount(0);
     await page.screenshot({ path: join(shots, "palette-desktop.png") });
 
+    // Ctrl+K toggles (ui 0.17): it closes the open palette, opens it again, and Esc closes it.
+    await page.keyboard.press("Control+K");
+    await expect(input).toBeHidden();
     await page.keyboard.press("Control+K");
     await expect(input).toBeVisible();
     await page.keyboard.press("Escape");
@@ -221,3 +224,39 @@ for (const width of [1280, 1920]) {
     });
   });
 }
+
+// Live data (rule WEB-50). The stream is OFF under a test browser by itself (navigator.webdriver), which is why the
+// tests above settle on networkidle; these are the dedicated tests that turn it on.
+test("GET /api/live signed out answers 401 problem+json", async ({ request }) => {
+  const res = await request.get("/api/live"); // a standalone request context: no session cookie
+  expect(res.status()).toBe(401);
+  expect(res.headers()["content-type"]).toContain("application/problem+json");
+});
+
+test.describe("live stream", () => {
+  test.skip(!sessionCookie, "SESSION_COOKIE is not set: the stream needs a signed-in person");
+
+  test("the page turns the stream on with ?live=1 and the indicator reports live", async ({ page }) => {
+    await page.goto("/?live=1");
+    await expect(page.getByRole("status", { name: "Live" })).toBeVisible();
+    // No console errors from the stream, and it stays up (a failure would flip the dot to Reconnecting).
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("status", { name: "Live" })).toBeVisible();
+  });
+
+  test("the stream's first frame is a comment, with the event-stream headers", async ({ page }) => {
+    await page.goto("/?live=0"); // any page of the app, stream off: the check below reads it by hand
+    const got = await page.evaluate(async () => {
+      const ctl = new AbortController();
+      const res = await fetch("/api/live", { credentials: "include", signal: ctl.signal });
+      const reader = res.body!.getReader();
+      const first = new TextDecoder().decode((await reader.read()).value);
+      ctl.abort();
+      return { status: res.status, type: res.headers.get("content-type"), cache: res.headers.get("cache-control"), first };
+    });
+    expect(got.status).toBe(200);
+    expect(got.type).toContain("text/event-stream");
+    expect(got.cache).toContain("no-store");
+    expect(got.first.startsWith(": live")).toBe(true);
+  });
+});
