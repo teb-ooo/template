@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# playground-app restart | build | test | smoke | gate-check | status
+# playground-app restart | build | test | smoke | gate-check | status | promote <vX.Y.Z>
 #   test        .npmrc and release-age checks, go vet, go test with PLAYGROUND_TEST_DATABASE_URL (default: DATABASE_URL, the
 #               staging database; only a throwaway c_<uuid> schema is created and dropped) and PLAYGROUND_REQUIRE_DB=1, then
 #               "contract tests: N ran, M skipped"; a contract test that cannot run FAILS (never skips). restart and gate-check run it too.
@@ -8,9 +8,74 @@
 #               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
 #               and run `npm run test:e2e` against it. Prints GATE-CHECK PASS or FAIL and exits non-zero on failure.
 #               It never touches the running staging app or its data. Run it before every `playground promote` tag.
-case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
+#   status      the app and agent services, then `promotion: auto|manual` (playd's promote_mode for this app; unknown when playd does not answer).
+#   promote     promote the tag (already committed on main and pushed with the tag: git push origin main vX.Y.Z) to production YOURSELF.
+#               Only when `status` says `promotion: auto`; on manual it refuses and you ask the orchestrator (the owner decides, only the owner
+#               switches the mode). playd runs exactly the gates and steps of `playground promote` (tag on origin/main, version == tag,
+#               playground-owned files, release age, secret scan, parity test, browser smoke, migrations, health) and none can be skipped. A gate that fails is
+#               printed plainly and nothing changed. A promotion whose health check fails after the switch is rolled back to the previous
+#               image by playd (the database is not restored; the snapshot path is in the message). Run gate-check first; the history records you as app:<name> (auto).
+case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status | promote   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
 set -euo pipefail
 cd "${PLAYGROUND_APP_DIR:-/app}"
+# playd_call METHOD PATH [BODY]: this app's own call to playd (PLAYD_URL, PLAYD_TOKEN: the app token, own app only). Sets PD_STATUS
+# (HTTP code, 000 when playd does not answer) and PD_BODY. The token is never printed.
+playd_call() {
+  local method="$1" path="$2" body="${3-}" out
+  local args=(-s -m "${PLAYD_TIMEOUT:-10}" --connect-timeout 3 -X "$method" -w $'\n%{http_code}' -H "Authorization: Bearer ${PLAYD_TOKEN:-}")
+  if [ -n "$body" ]; then args+=(-H "Content-Type: application/json" --data-binary "$body"); fi
+  out="$(curl "${args[@]}" "${PLAYD_URL:-http://playd:9000}$path" 2>/dev/null)" || true
+  PD_STATUS="${out##*$'\n'}"
+  case "$PD_STATUS" in [0-9][0-9][0-9]) ;; *) PD_STATUS=000 ;; esac
+  if [[ "$out" == *$'\n'* ]]; then PD_BODY="${out%$'\n'*}"; else PD_BODY=""; fi
+}
+# promotion_mode: auto, manual, or unknown (no token or app name, playd silent or not answering with a mode).
+promotion_mode() {
+  local m=""
+  if [ -n "${PLAYD_TOKEN:-}" ] && [ -n "${APP_NAME:-}" ]; then
+    playd_call GET "/v1/apps/$APP_NAME"
+    case "$PD_STATUS" in 2*) m="$(jq -r 'if (.promote_mode|type)=="string" then .promote_mode else "" end' <<<"$PD_BODY" 2>/dev/null || true)" ;; esac
+  fi
+  case "$m" in auto|manual) echo "$m" ;; *) echo unknown ;; esac
+}
+# promote_tag TAG: the self-promotion. playd refuses it unless the app is on auto and then runs the one promotion service.
+promote_tag() {
+  local tag="${1:-}" mode id rc=0 line t
+  if ! [[ "$tag" =~ ^v[0-9][0-9A-Za-z._+-]{0,60}$ ]]; then echo "usage: playground-app promote vX.Y.Z (a tag already on main and pushed)" >&2; return 2; fi
+  [ -n "${PLAYD_TOKEN:-}" ] && [ -n "${APP_NAME:-}" ] || { echo "promote: PLAYD_TOKEN and APP_NAME are not set; run this inside the app's agent container" >&2; return 1; }
+  mode="$(promotion_mode)"
+  case "$mode" in
+    auto) ;;
+    manual) echo "promote: refused. Promotion for $APP_NAME is MANUAL: you may not promote it yourself. Report [done] with the tag and ask the orchestrator; the owner decides (only the owner can switch this app to auto)." >&2; return 1 ;;
+    *) echo "promote: refused. playd did not say which promotion mode $APP_NAME is in (unreachable or unexpected answer); treat it as MANUAL and ask the orchestrator." >&2; return 1 ;;
+  esac
+  playd_call POST "/v1/apps/$APP_NAME/promote" "$(jq -cn --arg t "$tag" '{tag:$t}')"
+  if [ "$PD_STATUS" != 202 ]; then
+    echo "promote: refused by playd ($PD_STATUS): $(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null)" >&2
+    return 1
+  fi
+  id="$(jq -r '.job_id // empty' <<<"$PD_BODY" 2>/dev/null)"
+  [[ "$id" =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo "promote: playd did not return a job id" >&2; return 1; }
+  echo "promoting $tag of $APP_NAME (job $id); the gates run first, this can take several minutes"
+  local done_seen=""
+  while IFS= read -r line; do
+    t="$(jq -r '.t // empty' <<<"$line" 2>/dev/null)" || continue
+    case "$t" in
+      log) echo "  $(jq -r '.msg' <<<"$line")" ;;
+      done)
+        done_seen=1
+        if [ "$(jq -r '.status' <<<"$line")" = ok ]; then
+          echo "PROMOTED $tag: $(jq -r '.result.url // empty' <<<"$line")"
+        else
+          echo "PROMOTE FAILED (nothing was promoted unless the message says otherwise):" >&2
+          jq -r '.error // "unknown error"' <<<"$line" >&2
+          rc=1
+        fi ;;
+    esac
+  done < <(curl -sN -m "${PROMOTE_TIMEOUT:-3000}" --connect-timeout 3 -H "Authorization: Bearer $PLAYD_TOKEN" "${PLAYD_URL:-http://playd:9000}/v1/jobs/$id" 2>/dev/null)
+  [ -n "$done_seen" ] || { echo "promote: the job stream ended before the job finished; check \`playground-app status\` and the staging logs, do not retry blindly" >&2; return 1; }
+  return "$rc"
+}
 # go_tests: go vet and go test, with the contract tests' database provided and required. PLAYGROUND_TEST_DATABASE_URL
 # defaults to the app's DATABASE_URL (staging; the tests only create and drop a throwaway c_<uuid> schema); it is never
 # printed. PLAYGROUND_REQUIRE_DB=1 makes a missing database a test failure, not a skip. Then it prints
@@ -131,6 +196,10 @@ case "${1:-}" in
     for i in $(seq 1 30); do curl -sf localhost:8080/healthz >/dev/null && break; sleep 1; [ "$i" = 30 ] && { echo "app did not come up; check logs: /run/service/app" >&2; exit 1; }; done
     echo "up"
     "$0" smoke ;;
-  status) s6-svstat /run/service/app /run/service/claude ;;
-  *) echo "usage: playground-app build|test|smoke|gate-check|restart|status" >&2; exit 2 ;;
+  status)
+    rc=0; s6-svstat /run/service/app /run/service/claude || rc=$?
+    echo "promotion: $(promotion_mode)"
+    exit "$rc" ;;
+  promote) promote_tag "${2:-}"; exit $? ;;
+  *) echo "usage: playground-app build|test|smoke|gate-check|restart|status|promote <vX.Y.Z>" >&2; exit 2 ;;
 esac
