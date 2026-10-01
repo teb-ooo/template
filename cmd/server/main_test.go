@@ -16,13 +16,13 @@ func TestPrintSpecNeedsNoEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc struct {
-		Info  struct{ Title string } `json:"info"`
-		Paths map[string]any         `json:"paths"`
+		OpenAPI string                 `json:"openapi"`
+		Info    struct{ Title string } `json:"info"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
 		t.Fatalf("output is not JSON: %v", err)
 	}
-	if doc.Info.Title != "sample" || doc.Paths["/api/items"] == nil {
+	if doc.Info.Title != "sample" || doc.OpenAPI == "" {
 		t.Fatalf("unexpected document: %+v", doc)
 	}
 }

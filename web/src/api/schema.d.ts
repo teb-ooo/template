@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/items": {
+    "/api/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,34 +12,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List items
-         * @description Returns every item, newest first.
+         * Get the current user
+         * @description Returns the signed-in user, or 401 when there is no session or token.
          */
-        get: operations["list-items"];
-        put?: never;
-        /**
-         * Create an item
-         * @description Creates an item with the given name and returns it.
-         */
-        post: operations["create-item"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/items/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get an item
-         * @description Returns one item by id, or 404 when it does not exist.
-         */
-        get: operations["get-item"];
+        get: operations["get-current-user"];
         put?: never;
         post?: never;
         delete?: never;
@@ -52,15 +28,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        CreateItemInputBody: {
+        CurrentUserOutputBody: {
             /**
              * Format: uri
              * @description A URL to the JSON Schema for this object.
-             * @example https://example.com/schemas/CreateItemInputBody.json
+             * @example https://example.com/schemas/CurrentUserOutputBody.json
              */
             readonly $schema?: string;
-            /** @description Display name, 1 to 200 characters. */
-            name: string;
+            /** @description Email address. */
+            email: string;
+            /** @description Stable identity subject. */
+            subject: string;
+            /** @description Username. */
+            username: string;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -109,41 +89,6 @@ export interface components {
              */
             type: string;
         };
-        Item: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example https://example.com/schemas/Item.json
-             */
-            readonly $schema?: string;
-            /**
-             * Format: date-time
-             * @description Creation time, RFC 3339 UTC.
-             */
-            created_at: string;
-            /**
-             * Format: uuid
-             * @description Item id (UUIDv7).
-             */
-            id: string;
-            /** @description Display name. */
-            name: string;
-            /**
-             * Format: date-time
-             * @description Last update time, RFC 3339 UTC.
-             */
-            updated_at: string;
-        };
-        ListItemsOutputBody: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example https://example.com/schemas/ListItemsOutputBody.json
-             */
-            readonly $schema?: string;
-            /** @description Items, newest first. */
-            items: components["schemas"]["Item"][] | null;
-        };
     };
     responses: never;
     parameters: never;
@@ -153,7 +98,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    "list-items": {
+    "get-current-user": {
         parameters: {
             query?: never;
             header?: never;
@@ -168,72 +113,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListItemsOutputBody"];
-                };
-            };
-            /** @description Error */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
-                };
-            };
-        };
-    };
-    "create-item": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateItemInputBody"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Item"];
-                };
-            };
-            /** @description Error */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
-                };
-            };
-        };
-    };
-    "get-item": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Item id (UUIDv7). */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Item"];
+                    "application/json": components["schemas"]["CurrentUserOutputBody"];
                 };
             };
             /** @description Error */

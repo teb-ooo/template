@@ -12,7 +12,6 @@ window.scrollTo = () => undefined; // jsdom does not implement it; the router ca
 
 setupMswServer(
   http.get("*/auth/me", () => HttpResponse.json(user)),
-  http.get("*/api/items", () => HttpResponse.json({ items: [] })),
 );
 
 function renderApp(path: string) {
@@ -29,22 +28,21 @@ describe("root route", () => {
   it("renders the header, the signed-in user and the empty state", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
-    expect(await screen.findByRole("heading", { name: "Items" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
     expect(screen.getByText("staging")).toBeTruthy();
     expect(await screen.findByText("ada")).toBeTruthy();
-    expect(await screen.findByText(/No items yet/)).toBeTruthy();
+    expect(await screen.findByText(/Nothing here yet/)).toBeTruthy();
   });
 
-  it("opens the command palette with the shortcut and lists the route and the app command", async () => {
+  it("opens the command palette with the shortcut and lists the route", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
-    await screen.findByRole("heading", { name: "Items" });
+    await screen.findByRole("heading", { name: "Home" });
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     const box = await screen.findByRole("combobox");
     expect(box).toBeTruthy();
-    // "Go to" reads staticData.title, the route's own command comes from useRegisterCommands.
-    expect(screen.getByRole("option", { name: /Items/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /New item/ })).toBeTruthy();
+    // "Go to" reads staticData.title, a route's own commands come from useRegisterCommands.
+    expect(screen.getByRole("option", { name: /Home/ })).toBeTruthy();
     expect(screen.queryByRole("option", { name: /agent panel/i })).toBeNull();
     // Apps follow the system colour scheme: there is no theme command.
     expect(screen.queryByRole("option", { name: /theme/i })).toBeNull();

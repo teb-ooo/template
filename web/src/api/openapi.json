@@ -1,27 +1,35 @@
 {
   "components": {
     "schemas": {
-      "CreateItemInputBody": {
+      "CurrentUserOutputBody": {
         "additionalProperties": false,
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
             "examples": [
-              "https://example.com/schemas/CreateItemInputBody.json"
+              "https://example.com/schemas/CurrentUserOutputBody.json"
             ],
             "format": "uri",
             "readOnly": true,
             "type": "string"
           },
-          "name": {
-            "description": "Display name, 1 to 200 characters.",
-            "maxLength": 200,
-            "minLength": 1,
+          "email": {
+            "description": "Email address.",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Stable identity subject.",
+            "type": "string"
+          },
+          "username": {
+            "description": "Username.",
             "type": "string"
           }
         },
         "required": [
-          "name"
+          "subject",
+          "email",
+          "username"
         ],
         "type": "object"
       },
@@ -105,74 +113,6 @@
           }
         },
         "type": "object"
-      },
-      "Item": {
-        "additionalProperties": false,
-        "properties": {
-          "$schema": {
-            "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/Item.json"
-            ],
-            "format": "uri",
-            "readOnly": true,
-            "type": "string"
-          },
-          "created_at": {
-            "description": "Creation time, RFC 3339 UTC.",
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "description": "Item id (UUIDv7).",
-            "format": "uuid",
-            "type": "string"
-          },
-          "name": {
-            "description": "Display name.",
-            "type": "string"
-          },
-          "updated_at": {
-            "description": "Last update time, RFC 3339 UTC.",
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "created_at",
-          "updated_at"
-        ],
-        "type": "object"
-      },
-      "ListItemsOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "$schema": {
-            "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/ListItemsOutputBody.json"
-            ],
-            "format": "uri",
-            "readOnly": true,
-            "type": "string"
-          },
-          "items": {
-            "description": "Items, newest first.",
-            "items": {
-              "$ref": "#/components/schemas/Item"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "type": "object"
       }
     },
     "securitySchemes": {
@@ -196,16 +136,16 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/items": {
+    "/api/me": {
       "get": {
-        "description": "Returns every item, newest first.",
-        "operationId": "list-items",
+        "description": "Returns the signed-in user, or 401 when there is no session or token.",
+        "operationId": "get-current-user",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListItemsOutputBody"
+                  "$ref": "#/components/schemas/CurrentUserOutputBody"
                 }
               }
             },
@@ -230,109 +170,9 @@
             "bearer": []
           }
         ],
-        "summary": "List items",
+        "summary": "Get the current user",
         "tags": [
-          "items"
-        ]
-      },
-      "post": {
-        "description": "Creates an item with the given name and returns it.",
-        "operationId": "create-item",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateItemInputBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Item"
-                }
-              }
-            },
-            "description": "Created"
-          },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorModel"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "security": [
-          {
-            "session": []
-          },
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create an item",
-        "tags": [
-          "items"
-        ]
-      }
-    },
-    "/api/items/{id}": {
-      "get": {
-        "description": "Returns one item by id, or 404 when it does not exist.",
-        "operationId": "get-item",
-        "parameters": [
-          {
-            "description": "Item id (UUIDv7).",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "description": "Item id (UUIDv7).",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Item"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorModel"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "security": [
-          {
-            "session": []
-          },
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get an item",
-        "tags": [
-          "items"
+          "session"
         ]
       }
     }

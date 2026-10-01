@@ -111,7 +111,7 @@ for (const route of routes) {
 test.describe("command palette", () => {
   test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
 
-  test("opens with Ctrl+K, lists routes and built-ins, runs the create-item command, closes with Esc", async ({ page }) => {
+  test("opens with Ctrl+K, lists routes and built-ins, closes with Esc", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     const playground = await page.evaluate(() => window.__PLAYGROUND__ ?? {});
@@ -134,12 +134,6 @@ test.describe("command palette", () => {
     if (claudeUrl !== "") await expect(claudeApp).toBeVisible();
     else await expect(claudeApp).toHaveCount(0);
     await page.screenshot({ path: join(shots, "palette-desktop.png") });
-
-    await input.fill("new");
-    await expect(page.getByRole("option", { name: /New item/ })).toBeVisible();
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("textbox", { name: "Name" })).toBeFocused();
 
     await page.keyboard.press("Control+K");
     await expect(input).toBeVisible();
