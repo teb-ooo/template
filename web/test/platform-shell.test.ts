@@ -7,7 +7,7 @@
  *
  *   a. no file renders `<Shell` imported from "@teb-ooo/ui" (and, when `src/routes/__root.tsx` exists, that file must).
  *   b. a `<Shell` gets a `header` prop (the attribute, or a spread of an object literal that has a `header` key).
- *   c. a `<Shell` is not inside a `<CommandProvider` (imported from "@teb-ooo/ui/cmdk") in the same file.
+ *   c. a `<Shell` is rendered in a file that renders no `<CommandProvider` (imported from "@teb-ooo/ui/cmdk"): the provider may wrap the Shell or a component that renders it.
  *   d. any file uses `useFeedback`, `useFeedbackCommand` or `FeedbackPanel` (imported from @teb-ooo/*, or rendered or
  *      called by that name): the shell registers Send feedback and owns the panel.
  *   e. any file imports `CommandTrigger` (the bar has the trigger).
@@ -132,6 +132,10 @@ export function findViolations(webRoot: string): Violation[] {
       }
     }
 
+    // (c): the Shell and a CommandProvider from @teb-ooo/ui/cmdk live in the same file. The provider may wrap the Shell directly
+    // or wrap a child component that renders it (a hook inside the shell's children needs the provider above it).
+    const unwrapped: ts.Node[] = [];
+    let providerSeen = false;
     const visit = (n: ts.Node): void => {
       const el = elementOf(n);
       if (el) {
@@ -149,12 +153,9 @@ export function findViolations(webRoot: string): Violation[] {
               }
             }
           }
-          let wrapped = false;
-          for (let p: ts.Node | undefined = n.parent; p; p = p.parent) {
-            if (ts.isJsxElement(p) && tagExport(p.openingElement.tagName, cmdk) === "CommandProvider") wrapped = true;
-          }
-          if (!wrapped) add("c", n, "Shell is not inside CommandProvider (from @teb-ooo/ui/cmdk) in this file");
+          unwrapped.push(n);
         }
+        if (name === null && tagExport(el.tagName, cmdk) === "CommandProvider") providerSeen = true;
         // (d) the feedback panel rendered by its name, even when it is defined elsewhere.
         const t = el.tagName;
         const tn = ts.isIdentifier(t) ? t.text : null;
@@ -170,6 +171,7 @@ export function findViolations(webRoot: string): Violation[] {
       ts.forEachChild(n, visit);
     };
     visit(sf);
+    if (!providerSeen) for (const n of unwrapped) add("c", n, "Shell is rendered in a file with no CommandProvider (from @teb-ooo/ui/cmdk)");
   }
 
   // (a): the route root renders Shell.
@@ -185,7 +187,7 @@ export function findViolations(webRoot: string): Violation[] {
 const ADVICE: Record<Violation["check"], string> = {
   a: `render the platform shell at the route root: <CommandProvider><Shell sidebar={...}>...</Shell></CommandProvider>, Shell from "${UI}"`,
   b: "delete the header prop: Shell is closed, its bar is the platform's; app-specific links go in the sidebar, the page or a Cmd+K command",
-  c: `wrap Shell in <CommandProvider> from "${CMDK}" in the same JSX tree, inside the router and the query provider`,
+  c: `render <CommandProvider> from "${CMDK}" in the same file as Shell (around it or around the component that renders it), inside the router and the query provider`,
   d: "delete it: the Shell registers Send feedback in Cmd+K (owner only) and owns the feedback panel",
   e: "delete it: the bar has the Cmd+K trigger",
   f: "delete your own header and everything it held; the Shell draws the one platform bar",
@@ -233,6 +235,31 @@ describe("the shell checker", () => {
     "}",
     "",
   ].join("\n");
+
+  it("(c) accepts a provider that wraps a child component which renders the Shell (bd's layout)", () => {
+    const childStyle = [
+      'import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";',
+      'import { CommandProvider } from "@teb-ooo/ui/cmdk";',
+      'import { Shell } from "@teb-ooo/ui";',
+      "export const Route = createRootRouteWithContext()({ component: Root });",
+      "function Root() {",
+      "  return (",
+      "    <CommandProvider>",
+      "      <Inner />",
+      "    </CommandProvider>",
+      "  );",
+      "}",
+      "function Inner() {",
+      "  return (",
+      "    <Shell>",
+      "      <Outlet />",
+      "    </Shell>",
+      "  );",
+      "}",
+      "",
+    ].join("\n");
+    expect(run({ "src/routes/__root.tsx": childStyle })).toEqual([]);
+  });
 
   it("accepts the template's root, an aliased Shell, a namespace import and ignored files", () => {
     expect(run({ "src/routes/__root.tsx": GOOD })).toEqual([]);
