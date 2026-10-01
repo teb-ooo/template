@@ -30,6 +30,7 @@ services:
       - /srv/playground/claude/apps/{{name}}.json:/home/agent/.claude.json
       - /srv/playground/rules:/playground/brain:ro
       - /srv/playground/rules/rules:/playground/rules:ro
+      - /srv/playground/data/apps/{{name}}/feedback:/playground/feedback:ro
     networks: [app-{{name}}]
     restart: unless-stopped
     security_opt: ["no-new-privileges:true"]
