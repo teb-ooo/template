@@ -17,7 +17,16 @@
  */
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,12 +117,26 @@ export function findBannedImports(webRoot: string): Problem[] {
     const sf = ts.createSourceFile(f, src, ts.ScriptTarget.Latest, true, kind);
     const hit = (n: ts.Node, spec: string, how: string): void => {
       const lib = bannedLib(spec);
-      if (lib) out.push({ file: relative(webRoot, f).split(sep).join("/"), line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1, lib, how: `${how} "${spec}"` });
+      if (lib)
+        out.push({
+          file: relative(webRoot, f).split(sep).join("/"),
+          line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+          lib,
+          how: `${how} "${spec}"`,
+        });
     };
     const visit = (n: ts.Node): void => {
-      if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier && ts.isStringLiteralLike(n.moduleSpecifier)) {
+      if (
+        (ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) &&
+        n.moduleSpecifier &&
+        ts.isStringLiteralLike(n.moduleSpecifier)
+      ) {
         hit(n, n.moduleSpecifier.text, ts.isImportDeclaration(n) ? "imports" : "re-exports from");
-      } else if (ts.isImportEqualsDeclaration(n) && ts.isExternalModuleReference(n.moduleReference) && ts.isStringLiteralLike(n.moduleReference.expression)) {
+      } else if (
+        ts.isImportEqualsDeclaration(n) &&
+        ts.isExternalModuleReference(n.moduleReference) &&
+        ts.isStringLiteralLike(n.moduleReference.expression)
+      ) {
         hit(n, n.moduleReference.expression.text, "imports");
       } else if (ts.isCallExpression(n) && n.arguments.length >= 1) {
         const arg = n.arguments[0];
@@ -168,7 +191,8 @@ describe("the state-library checker", () => {
   it("accepts React context, TanStack Query, comments and look-alike names", () => {
     const hits = withTree(
       {
-        "package.json": '{ "dependencies": { "react": "1", "@tanstack/react-query": "1", "swr-like": "1", "reduxish": "1" } }',
+        "package.json":
+          '{ "dependencies": { "react": "1", "@tanstack/react-query": "1", "swr-like": "1", "reduxish": "1" } }',
         "src/a.tsx":
           'import { createContext, useState } from "react";\nimport { useQuery } from "@tanstack/react-query";\n// import create from "zustand";\nconst s = "import axios from \'axios\'";\nexport const C = createContext(0);\n',
         "src/api/schema.d.ts": 'import x from "zustand";\n',
@@ -180,9 +204,20 @@ describe("the state-library checker", () => {
   });
 
   it("rejects every banned library in package.json, naming the line", () => {
-    const body = '{\n  "dependencies": {\n    "zustand": "5",\n    "axios": "1"\n  },\n  "devDependencies": { "@reduxjs/toolkit": "2", "swr": "2", "jotai": "2", "recoil": "1", "mobx": "6", "valtio": "1", "redux": "5" }\n}';
+    const body =
+      '{\n  "dependencies": {\n    "zustand": "5",\n    "axios": "1"\n  },\n  "devDependencies": { "@reduxjs/toolkit": "2", "swr": "2", "jotai": "2", "recoil": "1", "mobx": "6", "valtio": "1", "redux": "5" }\n}';
     const hits = withTree({ "package.json": body }, findBannedDeps);
-    expect(hits.map((h) => h.lib).sort()).toEqual(["@reduxjs/toolkit", "axios", "jotai", "mobx", "recoil", "redux", "swr", "valtio", "zustand"]);
+    expect(hits.map((h) => h.lib).sort()).toEqual([
+      "@reduxjs/toolkit",
+      "axios",
+      "jotai",
+      "mobx",
+      "recoil",
+      "redux",
+      "swr",
+      "valtio",
+      "zustand",
+    ]);
     expect(hits.find((h) => h.lib === "zustand")?.line).toBe(3);
     const msg = describeProblem(hits.find((h) => h.lib === "zustand")!);
     expect(msg).toContain("web/package.json:3: rule WEB-16");
@@ -216,6 +251,11 @@ describe("the state-library checker", () => {
   });
 
   it("does not scan e2e or test directories", () => {
-    expect(withTree({ "e2e/a.ts": 'import x from "axios";\n', "test/b.ts": 'import x from "zustand";\n' }, findBannedImports)).toEqual([]);
+    expect(
+      withTree(
+        { "e2e/a.ts": 'import x from "axios";\n', "test/b.ts": 'import x from "zustand";\n' },
+        findBannedImports,
+      ),
+    ).toEqual([]);
   });
 });

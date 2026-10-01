@@ -17,7 +17,16 @@
  */
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,7 +73,10 @@ function markerOn(line: string | undefined): string | undefined {
   if (line === undefined) return undefined;
   const m = new RegExp(`(?://|/\\*)[^\\n]*?${MARKER}\\b(.*)$`).exec(line);
   if (!m) return undefined;
-  return (m[1] ?? "").replace(/\*\/.*$/, "").replace(/[}\s]+$/, "").trim();
+  return (m[1] ?? "")
+    .replace(/\*\/.*$/, "")
+    .replace(/[}\s]+$/, "")
+    .trim();
 }
 
 function callName(n: ts.CallExpression | ts.NewExpression): string | null {
@@ -72,7 +84,8 @@ function callName(n: ts.CallExpression | ts.NewExpression): string | null {
   if (ts.isNewExpression(n)) return ts.isIdentifier(e) && e.text === "XMLHttpRequest" ? "new XMLHttpRequest" : null;
   if (ts.isIdentifier(e)) return e.text === "fetch" ? "fetch(...)" : e.text === "axios" ? "axios(...)" : null;
   if (ts.isPropertyAccessExpression(e)) {
-    if (ts.isIdentifier(e.expression) && GLOBALS.has(e.expression.text) && e.name.text === "fetch") return `${e.expression.text}.fetch(...)`;
+    if (ts.isIdentifier(e.expression) && GLOBALS.has(e.expression.text) && e.name.text === "fetch")
+      return `${e.expression.text}.fetch(...)`;
     let root: ts.Expression = e;
     while (ts.isPropertyAccessExpression(root) || ts.isCallExpression(root)) root = root.expression;
     if (ts.isIdentifier(root) && root.text === "axios") return "axios call";
@@ -100,7 +113,12 @@ export function findRawCalls(webRoot: string): RawCall[] {
           const file = relative(webRoot, f).split(sep).join("/");
           const dup = out.some((o) => o.file === file && o.line === idx + 1 && o.what === what);
           if (!dup && (reason === undefined || reason === "")) {
-            out.push({ file: relative(webRoot, f).split(sep).join("/"), line: idx + 1, what, marker: reason === "" ? "no-reason" : "" });
+            out.push({
+              file: relative(webRoot, f).split(sep).join("/"),
+              line: idx + 1,
+              what,
+              marker: reason === "" ? "no-reason" : "",
+            });
           }
         }
       }
@@ -146,7 +164,8 @@ describe("the raw-call checker", () => {
 
   it("accepts hooks, comments, strings, fetch as a property name and files it does not scan", () => {
     const hits = run({
-      "src/a.tsx": 'const { data } = api.useQuery("get", "/api/items");\n// fetch("/x") is banned\nconst s = "fetch(1)";\nconst o = { fetch: 1 };\nconst r = obj.fetch(1);\n',
+      "src/a.tsx":
+        'const { data } = api.useQuery("get", "/api/items");\n// fetch("/x") is banned\nconst s = "fetch(1)";\nconst o = { fetch: 1 };\nconst r = obj.fetch(1);\n',
       "e2e/smoke.spec.ts": 'await fetch("/healthz");\n',
       "src/a.test.tsx": 'await fetch("/x");\n',
       "src/api/schema.d.ts": "declare const x: ReturnType<typeof fetch>;\n",
@@ -159,7 +178,7 @@ describe("the raw-call checker", () => {
     const hits = run({
       "src/a.ts": 'export const f = () => fetch("/api/x");\n',
       "src/b.tsx": '\nawait window.fetch("/x");\nawait globalThis.fetch("/y");\n',
-      "src/c.ts": 'const x = new XMLHttpRequest();\n',
+      "src/c.ts": "const x = new XMLHttpRequest();\n",
       "src/d.ts": 'axios.get("/x");\naxios("/y");\naxios.create().post("/z");\n',
     });
     expect(at(hits)).toEqual([
@@ -194,7 +213,12 @@ describe("the raw-call checker", () => {
       "src/c.ts": '// playground:allow-fetch far away\n\nconst c = await fetch("/x");\n',
       "src/d.ts": 'const marker = "playground:allow-fetch in a string";\nconst d = await fetch("/x");\n',
     });
-    expect(at(hits)).toEqual(["src/a.ts:2:fetch(...):no-reason", "src/b.ts:1:fetch(...):no-reason", "src/c.ts:3:fetch(...)", "src/d.ts:2:fetch(...)"]);
+    expect(at(hits)).toEqual([
+      "src/a.ts:2:fetch(...):no-reason",
+      "src/b.ts:1:fetch(...):no-reason",
+      "src/c.ts:3:fetch(...)",
+      "src/d.ts:2:fetch(...)",
+    ]);
     expect(describeRawCall(hits[0]!)).toContain("has no reason");
     expect(describeRawCall(hits[0]!).endsWith("see docs/web-ui.md")).toBe(true);
   });

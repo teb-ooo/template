@@ -7,7 +7,16 @@
  * The template defines no path alias for src, so only relative specifiers are accepted.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +30,8 @@ const SKIP_DIRS = new Set(["node_modules", "dist", "generated"]);
 const SOURCE_RE = /\.(ts|tsx|js|jsx|mjs)$/;
 
 /** `from "x"`, `import "x"`, `import("x")`, `require("x")` where x names an openapi.json (an optional ?query is allowed). */
-const SPEC_IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(["'`])([^"'`\n]*openapi\.json)(?:\?[^"'`\n]*)?\1/g;
+const SPEC_IMPORT_RE =
+  /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(["'`])([^"'`\n]*openapi\.json)(?:\?[^"'`\n]*)?\1/g;
 
 export interface Violation {
   file: string;
@@ -42,7 +52,9 @@ function walk(dir: string, self: string, out: string[]): void {
 
 /** The specifier the importing file should use for src/api/openapi.json. */
 export function expectedSpecifier(webRoot: string, file: string): string {
-  const rel = relative(dirname(file), join(webRoot, "src", "api", "openapi.json")).split(sep).join("/");
+  const rel = relative(dirname(file), join(webRoot, "src", "api", "openapi.json"))
+    .split(sep)
+    .join("/");
   return rel.startsWith(".") ? rel : `./${rel}`;
 }
 
@@ -60,7 +72,12 @@ export function findSpecViolations(webRoot: string, self = ""): Violation[] {
       if (/^\s*(\/\/|\*|\/\*)/.test(src.slice(lineStart, index + 1))) continue;
       const specifier = m[2] ?? "";
       const ok = specifier.startsWith(".") && resolve(dirname(f), specifier) === target;
-      if (!ok) hits.push({ file: relative(webRoot, f).split(sep).join("/"), line: src.slice(0, index).split("\n").length, specifier });
+      if (!ok)
+        hits.push({
+          file: relative(webRoot, f).split(sep).join("/"),
+          line: src.slice(0, index).split("\n").length,
+          specifier,
+        });
     }
   }
   return hits;
@@ -87,7 +104,10 @@ export function legacySpecProblem(webRoot: string): string | null {
 describe("the OpenAPI spec is imported from src/api/openapi.json (WEB-20)", () => {
   it("imports no openapi.json except src/api/openapi.json", () => {
     const hits = findSpecViolations(WEB_ROOT, SELF);
-    expect(hits.map((h) => describeViolation(WEB_ROOT, h)), "WEB-20").toEqual([]);
+    expect(
+      hits.map((h) => describeViolation(WEB_ROOT, h)),
+      "WEB-20",
+    ).toEqual([]);
   });
 
   it("has no web/openapi.json", () => {
@@ -135,7 +155,10 @@ describe("the spec-import checker", () => {
   });
 
   it("rejects ../openapi.json that points at web/openapi.json from a file in web/test or web/e2e", () => {
-    const { hits } = run({ "test/a.test.ts": 'import s from "../openapi.json";\n', "e2e/b.spec.ts": 'import s from "../openapi.json";\n' });
+    const { hits } = run({
+      "test/a.test.ts": 'import s from "../openapi.json";\n',
+      "e2e/b.spec.ts": 'import s from "../openapi.json";\n',
+    });
     expect(hits.map((h) => h.file).sort()).toEqual(["e2e/b.spec.ts", "test/a.test.ts"]);
   });
 
@@ -146,7 +169,12 @@ describe("the spec-import checker", () => {
       "src/c.ts": '\nconst s = await import("../../openapi.json");\n',
       "src/d.js": 'const s = require("../../openapi.json");\n',
     });
-    expect(hits.map((h) => `${h.file}:${h.line}`).sort()).toEqual(["src/a.ts:1", "src/b.ts:1", "src/c.ts:2", "src/d.js:1"]);
+    expect(hits.map((h) => `${h.file}:${h.line}`).sort()).toEqual([
+      "src/a.ts:1",
+      "src/b.ts:1",
+      "src/c.ts:2",
+      "src/d.js:1",
+    ]);
   });
 
   it("rejects a file in web/e2e", () => {

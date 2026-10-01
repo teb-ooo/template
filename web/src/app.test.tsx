@@ -12,13 +12,15 @@ afterEach(cleanup);
 beforeEach(() => window.history.replaceState(null, "", "/?live=0"));
 window.scrollTo = () => undefined; // jsdom does not implement it; the router calls it on navigation
 
-const server = setupMswServer(
-  http.get("*/auth/me", () => HttpResponse.json(user)),
-);
+const server = setupMswServer(http.get("*/auth/me", () => HttpResponse.json(user)));
 
 function renderApp(path: string) {
   const queryClient = createTestQueryClient();
-  const router = createRouter({ routeTree, context: { queryClient }, history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
   return render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

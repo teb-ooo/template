@@ -22,7 +22,16 @@
  */
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,11 +75,15 @@ function walk(dir: string, out: string[]): void {
 }
 
 /** Local names bound by imports from `module`: `named` maps the local name to the exported name; `namespaces` are `* as X` / default names. */
-function importsFrom(sf: ts.SourceFile, match: (module: string) => boolean): { named: Map<string, string>; namespaces: Set<string> } {
+function importsFrom(
+  sf: ts.SourceFile,
+  match: (module: string) => boolean,
+): { named: Map<string, string>; namespaces: Set<string> } {
   const named = new Map<string, string>();
   const namespaces = new Set<string>();
   for (const st of sf.statements) {
-    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier) || !match(st.moduleSpecifier.text)) continue;
+    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier) || !match(st.moduleSpecifier.text))
+      continue;
     const clause = st.importClause;
     if (!clause) continue;
     if (clause.name) namespaces.add(clause.name.text);
@@ -84,9 +97,17 @@ function importsFrom(sf: ts.SourceFile, match: (module: string) => boolean): { n
 type JsxTag = ts.JsxOpeningElement | ts.JsxSelfClosingElement;
 
 /** The exported name a JSX tag refers to when it comes from `imports` (`<Shell>`, `<S>` for `Shell as S`, `<UI.Shell>`), else null. */
-function tagExport(tag: ts.JsxTagNameExpression, imports: { named: Map<string, string>; namespaces: Set<string> }): string | null {
+function tagExport(
+  tag: ts.JsxTagNameExpression,
+  imports: { named: Map<string, string>; namespaces: Set<string> },
+): string | null {
   if (ts.isIdentifier(tag)) return imports.named.get(tag.text) ?? null;
-  if (ts.isPropertyAccessExpression(tag) && ts.isIdentifier(tag.expression) && imports.namespaces.has(tag.expression.text)) return tag.name.text;
+  if (
+    ts.isPropertyAccessExpression(tag) &&
+    ts.isIdentifier(tag.expression) &&
+    imports.namespaces.has(tag.expression.text)
+  )
+    return tag.name.text;
   return null;
 }
 
@@ -114,7 +135,10 @@ export function findViolations(webRoot: string): Violation[] {
 
     const ui = importsFrom(sf, (m) => m === UI);
     const cmdk = importsFrom(sf, (m) => m === CMDK);
-    const anyTeb = importsFrom(sf, (m) => m === UI || m.startsWith(`${UI}/`) || m === "@teb-ooo/web" || m.startsWith("@teb-ooo/web/"));
+    const anyTeb = importsFrom(
+      sf,
+      (m) => m === UI || m.startsWith(`${UI}/`) || m === "@teb-ooo/web" || m.startsWith("@teb-ooo/web/"),
+    );
     const callsRootRoute = /\bcreateRootRoute(WithContext)?\b/.test(src);
     const isRoot = rel === ROOT_FILE || callsRootRoute;
 
@@ -122,7 +146,16 @@ export function findViolations(webRoot: string): Violation[] {
     for (const st of sf.statements) {
       if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
       const m = st.moduleSpecifier.text;
-      if (!(m === UI || m.startsWith(`${UI}/`) || m === "@teb-ooo/web" || m.startsWith("@teb-ooo/web/") || m === "@teb-ooo/cmdk")) continue;
+      if (
+        !(
+          m === UI ||
+          m.startsWith(`${UI}/`) ||
+          m === "@teb-ooo/web" ||
+          m.startsWith("@teb-ooo/web/") ||
+          m === "@teb-ooo/cmdk"
+        )
+      )
+        continue;
       const b = st.importClause?.namedBindings;
       if (!b || !ts.isNamedImports(b)) continue;
       for (const e of b.elements) {
@@ -144,10 +177,14 @@ export function findViolations(webRoot: string): Violation[] {
         if (name === "Shell") {
           rendersShell.add(rel);
           for (const a of el.attributes.properties) {
-            if (ts.isJsxAttribute(a) && ts.isIdentifier(a.name) && a.name.text === "header") add("b", a, "passes a header prop to Shell");
+            if (ts.isJsxAttribute(a) && ts.isIdentifier(a.name) && a.name.text === "header")
+              add("b", a, "passes a header prop to Shell");
             if (ts.isJsxSpreadAttribute(a) && ts.isObjectLiteralExpression(a.expression)) {
               for (const p of a.expression.properties) {
-                if ((ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && p.name.getText(sf).replace(/^["']|["']$/g, "") === "header") {
+                if (
+                  (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
+                  p.name.getText(sf).replace(/^["']|["']$/g, "") === "header"
+                ) {
                   add("b", p, "passes a header prop to Shell (spread)");
                 }
               }
@@ -171,15 +208,23 @@ export function findViolations(webRoot: string): Violation[] {
       ts.forEachChild(n, visit);
     };
     visit(sf);
-    if (!providerSeen) for (const n of unwrapped) add("c", n, "Shell is rendered in a file with no CommandProvider (from @teb-ooo/ui/cmdk)");
+    if (!providerSeen)
+      for (const n of unwrapped)
+        add("c", n, "Shell is rendered in a file with no CommandProvider (from @teb-ooo/ui/cmdk)");
   }
 
   // (a): the route root renders Shell.
   const rootPath = join(webRoot, ROOT_FILE);
   if (existsSync(rootPath)) {
-    if (!rendersShell.has(ROOT_FILE)) out.push({ check: "a", file: ROOT_FILE, line: 1, what: `does not render <Shell> imported from "${UI}"` });
+    if (!rendersShell.has(ROOT_FILE))
+      out.push({ check: "a", file: ROOT_FILE, line: 1, what: `does not render <Shell> imported from "${UI}"` });
   } else if (files.length > 0 && rendersShell.size === 0) {
-    out.push({ check: "a", file: "src", line: 1, what: `no file renders <Shell> imported from "${UI}" (and ${ROOT_FILE} is missing)` });
+    out.push({
+      check: "a",
+      file: "src",
+      line: 1,
+      what: `no file renders <Shell> imported from "${UI}" (and ${ROOT_FILE} is missing)`,
+    });
   }
   return out;
 }
@@ -265,14 +310,25 @@ describe("the shell checker", () => {
     expect(run({ "src/routes/__root.tsx": GOOD })).toEqual([]);
     expect(
       run({
-        "src/routes/__root.tsx": GOOD.replace('import { Shell } from "@teb-ooo/ui";', 'import { Shell as Frame } from "@teb-ooo/ui";').replace("<Shell", "<Frame").replace("</Shell>", "</Frame>"),
+        "src/routes/__root.tsx": GOOD.replace(
+          'import { Shell } from "@teb-ooo/ui";',
+          'import { Shell as Frame } from "@teb-ooo/ui";',
+        )
+          .replace("<Shell", "<Frame")
+          .replace("</Shell>", "</Frame>"),
       }),
     ).toEqual([]);
     expect(
       run({
-        "src/routes/__root.tsx": GOOD.replace('import { Shell } from "@teb-ooo/ui";', 'import * as UI from "@teb-ooo/ui";').replace("<Shell", "<UI.Shell").replace("</Shell>", "</UI.Shell>"),
+        "src/routes/__root.tsx": GOOD.replace(
+          'import { Shell } from "@teb-ooo/ui";',
+          'import * as UI from "@teb-ooo/ui";',
+        )
+          .replace("<Shell", "<UI.Shell")
+          .replace("</Shell>", "</UI.Shell>"),
         // a header in a page, a word in a comment or a string, and test and generated files are not the root layout
-        "src/routes/index.tsx": 'import { Heading } from "@teb-ooo/ui";\n// useFeedback and <Shell header={x}> are banned\nconst s = "FeedbackPanel";\nexport const P = () => <header>page</header>;\n',
+        "src/routes/index.tsx":
+          'import { Heading } from "@teb-ooo/ui";\n// useFeedback and <Shell header={x}> are banned\nconst s = "FeedbackPanel";\nexport const P = () => <header>page</header>;\n',
         "src/app.test.tsx": 'import { CommandTrigger } from "@teb-ooo/ui/cmdk";\n',
         "src/routeTree.gen.ts": "/* eslint-disable */\n// generated\nuseFeedback();\n",
       }),
@@ -280,8 +336,16 @@ describe("the shell checker", () => {
   });
 
   it("(a) fails a root that does not render Shell, and an app with no Shell at all", () => {
-    expect(at(run({ "src/routes/__root.tsx": 'export const Route = 1;\nconst x = <div />;\n' }))).toEqual(["a:src/routes/__root.tsx:1"]);
-    expect(at(run({ "src/routes/__root.tsx": 'import { Shell } from "./my-shell";\nconst x = <Shell sidebar={1}>a</Shell>;\n' }))).toEqual(["a:src/routes/__root.tsx:1"]);
+    expect(at(run({ "src/routes/__root.tsx": "export const Route = 1;\nconst x = <div />;\n" }))).toEqual([
+      "a:src/routes/__root.tsx:1",
+    ]);
+    expect(
+      at(
+        run({
+          "src/routes/__root.tsx": 'import { Shell } from "./my-shell";\nconst x = <Shell sidebar={1}>a</Shell>;\n',
+        }),
+      ),
+    ).toEqual(["a:src/routes/__root.tsx:1"]);
     expect(at(run({ "src/main.tsx": "export const x = 1;\n" }))).toEqual(["a:src:1"]);
   });
 
@@ -304,7 +368,10 @@ describe("the shell checker", () => {
 
   it("(d) fails useFeedback, useFeedbackCommand and FeedbackPanel: import, call and render", () => {
     const hits = run({
-      "src/routes/__root.tsx": GOOD.replace('import { Shell } from "@teb-ooo/ui";', 'import { Shell, FeedbackPanel } from "@teb-ooo/ui";\nimport { useFeedback } from "@teb-ooo/web";')
+      "src/routes/__root.tsx": GOOD.replace(
+        'import { Shell } from "@teb-ooo/ui";',
+        'import { Shell, FeedbackPanel } from "@teb-ooo/ui";\nimport { useFeedback } from "@teb-ooo/web";',
+      )
         .replace("function Root() {", "function Root() {\n  const fb = useFeedback();")
         .replace("<Outlet />", "<Outlet /><FeedbackPanel feedback={fb} />"),
       "src/x.ts": 'import { useFeedbackCommand as cmd } from "@teb-ooo/ui/cmdk";\ncmd(1);\n',
@@ -321,8 +388,12 @@ describe("the shell checker", () => {
   });
 
   it("(e) fails CommandTrigger imported from the ui entries", () => {
-    expect(at(run({ "src/routes/__root.tsx": GOOD, "src/bar.tsx": 'import { CommandTrigger } from "@teb-ooo/ui/cmdk";\n' }))).toEqual(["e:src/bar.tsx:1"]);
-    expect(at(run({ "src/routes/__root.tsx": GOOD, "src/bar.tsx": 'import { CommandTrigger as T } from "@teb-ooo/ui";\n' }))).toEqual(["e:src/bar.tsx:1"]);
+    expect(
+      at(run({ "src/routes/__root.tsx": GOOD, "src/bar.tsx": 'import { CommandTrigger } from "@teb-ooo/ui/cmdk";\n' })),
+    ).toEqual(["e:src/bar.tsx:1"]);
+    expect(
+      at(run({ "src/routes/__root.tsx": GOOD, "src/bar.tsx": 'import { CommandTrigger as T } from "@teb-ooo/ui";\n' })),
+    ).toEqual(["e:src/bar.tsx:1"]);
   });
 
   it("(f) fails a <header in the root route file, in a helper component too, and not in other files", () => {
@@ -330,6 +401,8 @@ describe("the shell checker", () => {
     expect(at(run({ "src/routes/__root.tsx": own }))).toEqual(["f:src/routes/__root.tsx:9"]);
     const helper = GOOD + "function AppHeader() {\n  return <header>x</header>;\n}\n";
     expect(at(run({ "src/routes/__root.tsx": helper }))).toEqual(["f:src/routes/__root.tsx:15"]);
-    expect(at(run({ "src/routes/__root.tsx": GOOD, "src/routes/page.tsx": "export const P = () => <header>x</header>;\n" }))).toEqual([]);
+    expect(
+      at(run({ "src/routes/__root.tsx": GOOD, "src/routes/page.tsx": "export const P = () => <header>x</header>;\n" })),
+    ).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test, type ConsoleMessage, type Response } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page, type Response } from "@playwright/test";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const shots = join(here, "__screenshots__");
@@ -20,7 +20,12 @@ const routes = staticRoutes(readFileSync(join(here, "..", "src", "routeTree.gen.
 
 /** URLs (path only) whose 4xx/5xx responses are expected. Extend deliberately, with a reason. */
 const allowedFailures: { path: RegExp; status: number; reason: string; onlyWithoutSession?: boolean }[] = [
-  { path: /^\/auth\/me$/, status: 401, reason: "useUser probes the session; 401 means signed out", onlyWithoutSession: true },
+  {
+    path: /^\/auth\/me$/,
+    status: 401,
+    reason: "useUser probes the session; 401 means signed out",
+    onlyWithoutSession: true,
+  },
 ];
 
 const sessionCookie = process.env.SESSION_COOKIE;
@@ -64,7 +69,9 @@ test.beforeEach(async ({ context, baseURL }) => {
   if (!sessionCookie) return;
   const eq = sessionCookie.indexOf("=");
   if (eq < 1) throw new Error("SESSION_COOKIE must look like name=value");
-  await context.addCookies([{ name: sessionCookie.slice(0, eq), value: sessionCookie.slice(eq + 1), url: baseURL ?? "http://localhost:8080" }]);
+  await context.addCookies([
+    { name: sessionCookie.slice(0, eq), value: sessionCookie.slice(eq + 1), url: baseURL ?? "http://localhost:8080" },
+  ]);
 });
 
 test("the router exports at least one static route", () => {
@@ -76,7 +83,9 @@ for (const route of routes) {
     const problems: string[] = [];
     const isAllowed = (url: string, status: number) => {
       const path = new URL(url).pathname;
-      return allowedFailures.some((a) => a.path.test(path) && a.status === status && (!a.onlyWithoutSession || !sessionCookie));
+      return allowedFailures.some(
+        (a) => a.path.test(path) && a.status === status && (!a.onlyWithoutSession || !sessionCookie),
+      );
     };
 
     page.on("pageerror", (err) => problems.push(`uncaught exception: ${err.message}`));
@@ -176,7 +185,10 @@ test.describe("command palette", () => {
 // Signed out, a guarded page must send the browser to the sign-in page (a real document load), not render the
 // router's not-found page. The sign-in page itself is served by the Go app and redirects to the identity
 // provider, which a test cannot reach, so its response is stubbed.
-test("signed out: the start page navigates to /auth/login instead of rendering not-found", async ({ page, context }) => {
+test("signed out: the start page navigates to /auth/login instead of rendering not-found", async ({
+  page,
+  context,
+}) => {
   await context.clearCookies();
   let loginRequests = 0;
   await context.route("**/auth/login**", (route) => {
@@ -194,7 +206,7 @@ test("signed out: the start page navigates to /auth/login instead of rendering n
  * The platform bar (docs/shell.md): the shell's one top bar is the only banner, at most 24px high on one line, its
  * only text is the app's name, and every control in it has an accessible name. The app adds nothing to it.
  */
-async function expectSlimBar(page: import("@playwright/test").Page): Promise<void> {
+async function expectSlimBar(page: Page): Promise<void> {
   const bars = page.getByRole("banner");
   await expect(bars).toHaveCount(1);
   const box = await bars.boundingBox();
@@ -268,7 +280,12 @@ test.describe("live stream", () => {
       const reader = res.body!.getReader();
       const first = new TextDecoder().decode((await reader.read()).value);
       ctl.abort();
-      return { status: res.status, type: res.headers.get("content-type"), cache: res.headers.get("cache-control"), first };
+      return {
+        status: res.status,
+        type: res.headers.get("content-type"),
+        cache: res.headers.get("cache-control"),
+        first,
+      };
     });
     expect(got.status).toBe(200);
     expect(got.type).toContain("text/event-stream");

@@ -13,7 +13,16 @@
  */
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -122,7 +131,9 @@ export function findConfigProblems(webRoot: string): string[] {
     if (node.hasReferences && Object.keys(node.options).length === 0) continue;
     const at = (opt: string): string => name(node.origin[opt] ?? file);
     if (node.options.strict !== true) {
-      problems.push(`${at("strict")}: compilerOptions.strict must be true (it is ${JSON.stringify(node.options.strict ?? null)}), ${DOC}`);
+      problems.push(
+        `${at("strict")}: compilerOptions.strict must be true (it is ${JSON.stringify(node.options.strict ?? null)}), ${DOC}`,
+      );
     }
     if (node.options.verbatimModuleSyntax !== true) {
       problems.push(
@@ -168,7 +179,11 @@ export function findAnyUses(webRoot: string): AnyUse[] {
     const visit = (n: ts.Node): void => {
       if (n.kind === ts.SyntaxKind.AnyKeyword) {
         const line = sf.getLineAndCharacterOfPosition(n.getStart(sf)).line;
-        hits.push({ file: relative(webRoot, f).split(sep).join("/"), line: line + 1, text: (lines[line] ?? "").trim() });
+        hits.push({
+          file: relative(webRoot, f).split(sep).join("/"),
+          line: line + 1,
+          text: (lines[line] ?? "").trim(),
+        });
       }
       ts.forEachChild(n, visit);
     };
@@ -244,7 +259,8 @@ describe("TypeScript strictness fixtures", () => {
 
   it("follows references and extends, and names the weak referenced file", () => {
     const files = {
-      "tsconfig.json": '{ "files": [], "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }] }',
+      "tsconfig.json":
+        '{ "files": [], "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }] }',
       "tsconfig.base.json": GOOD,
       "tsconfig.app.json": '{ "extends": "./tsconfig.base.json", "compilerOptions": { "jsx": "react-jsx" } }',
       "tsconfig.node.json": '{ "compilerOptions": { "strict": true } }',
@@ -284,11 +300,16 @@ describe("TypeScript strictness fixtures", () => {
     const hits = withFixture({ "src/bad.ts": SRC_BAD.join("\n") }, findAnyUses);
     expect(hits.map((h) => h.line)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(hits[0]?.file).toBe("src/bad.ts");
-    expect(describeAny(hits[0] as AnyUse)).toMatch(/^web\/src\/bad\.ts:1 .*use `unknown` and narrow it, or a precise type; see docs\/web-ui\.md$/i);
+    expect(describeAny(hits[0] as AnyUse)).toMatch(
+      /^web\/src\/bad\.ts:1 .*use `unknown` and narrow it, or a precise type; see docs\/web-ui\.md$/i,
+    );
   });
 
   it("scans tsx and e2e too", () => {
-    const hits = withFixture({ "src/x.tsx": "export const X = (p: { a: any }) => <b>{p.a}</b>;", "e2e/s.spec.ts": "let z: any;" }, findAnyUses);
+    const hits = withFixture(
+      { "src/x.tsx": "export const X = (p: { a: any }) => <b>{p.a}</b>;", "e2e/s.spec.ts": "let z: any;" },
+      findAnyUses,
+    );
     expect(hits.map((h) => h.file).sort()).toEqual(["e2e/s.spec.ts", "src/x.tsx"]);
   });
 
@@ -318,7 +339,9 @@ describe("TypeScript strictness fixtures", () => {
   });
 
   it("checks the typecheck script", () => {
-    expect(withFixture({ "package.json": '{ "scripts": { "typecheck": "tsc --noEmit" } }' }, findScriptProblem)).toBeNull();
+    expect(
+      withFixture({ "package.json": '{ "scripts": { "typecheck": "tsc --noEmit" } }' }, findScriptProblem),
+    ).toBeNull();
     expect(withFixture({ "package.json": '{ "scripts": {} }' }, findScriptProblem)).toContain("typecheck");
   });
 });

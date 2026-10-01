@@ -11,7 +11,16 @@
  * file, including another `colors.css` anywhere else, uses semantic tokens.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -105,7 +114,8 @@ function expectNone(hits: Hit[], why: string): void {
 
 const skipColours = (f: string): boolean => isTheme(f) || isColours(f);
 
-const PALETTES = "stone|neutral|gray|zinc|slate|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
+const PALETTES =
+  "stone|neutral|gray|zinc|slate|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 
 describe("design language", () => {
   it("scans something", () => {
@@ -137,7 +147,10 @@ describe("design language", () => {
   });
 
   it("declares no font-family outside theme.css: one typeface, through the tokens", () => {
-    expectNone(find(/\bfont-family\s*:|\bfontFamily\s*:/, { skip: isTheme }), "the font comes from --font-sans and --font-mono");
+    expectNone(
+      find(/\bfont-family\s*:|\bfontFamily\s*:/, { skip: isTheme }),
+      "the font comes from --font-sans and --font-mono",
+    );
     expectNone(find(/(?<![-\w])font-(serif|display)\b(?!\s*:)/), "no second typeface");
   });
 
@@ -153,11 +166,15 @@ describe("design language", () => {
 
   it("has no theme control: no theme storage and no data-theme assignment (apps follow prefers-color-scheme)", () => {
     expectNone(
-      find(/\b(?:local|session)Storage\b[^\n]*(?:theme|color-scheme|prefers)|(?:theme|color-scheme|prefers)[^\n]*\b(?:local|session)Storage\b/i),
+      find(
+        /\b(?:local|session)Storage\b[^\n]*(?:theme|color-scheme|prefers)|(?:theme|color-scheme|prefers)[^\n]*\b(?:local|session)Storage\b/i,
+      ),
       "no stored theme preference",
     );
     expectNone(
-      find(/\bsetAttribute\(\s*["'`]data-theme|\bdataset\.theme\b|\bdata-theme\s*=|\[["']data-theme["']\]\s*=/, { skip: isTheme }),
+      find(/\bsetAttribute\(\s*["'`]data-theme|\bdataset\.theme\b|\bdata-theme\s*=|\[["']data-theme["']\]\s*=/, {
+        skip: isTheme,
+      }),
       "only a gallery forces a theme; components and apps never set data-theme",
     );
     expectNone(find(/\bmatchMedia\([^)]*prefers-color-scheme/), "no JS theming: the CSS follows the OS by itself");
@@ -186,7 +203,10 @@ describe("design language", () => {
   });
 
   it("has no hex, rgb, hsl or oklch literal in any file except theme.css and web/src/colors.css", () => {
-    expectNone(find(/(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, { skip: skipColours }), "no hex literals");
+    expectNone(
+      find(/(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, { skip: skipColours }),
+      "no hex literals",
+    );
     expectNone(find(/\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/, { skip: skipColours }), "no colour functions");
   });
 
@@ -194,11 +214,19 @@ describe("design language", () => {
     // The app's own name is never "another product": an app called Lore may say Lore. Apps carry it in playground.yaml
     // (one level above web/); the ui package has none and bans the full list.
     const own = ownAppName();
-    const banned = ["lore", "ory", "kratos", "hydra", "resend", "postmark", "pocket-?id", "tiptap"].filter((n) => n !== own && (IS_UI_PACKAGE || n !== "tiptap"));   // an app may use the TipTap editor library (its @tiptap/* imports and .tiptap class are code, not copy); only the ui package stays free of it
+    const banned = ["lore", "ory", "kratos", "hydra", "resend", "postmark", "pocket-?id", "tiptap"].filter(
+      (n) => n !== own && (IS_UI_PACKAGE || n !== "tiptap"),
+    ); // an app may use the TipTap editor library (its @tiptap/* imports and .tiptap class are code, not copy); only the ui package stays free of it
     const names = new RegExp(`\\b(${banned.join("|")})\\b`, "i");
     expectNone(find(names), "nothing shipped names another product");
     if (IS_UI_PACKAGE) {
-      const extra = ["README.md", "package.json", "theme-init.js", ...listDir("docs", /\.md$/), ...listDir("email", /./)];
+      const extra = [
+        "README.md",
+        "package.json",
+        "theme-init.js",
+        ...listDir("docs", /\.md$/),
+        ...listDir("email", /./),
+      ];
       const hits: Hit[] = [];
       for (const rel of extra) {
         const p = join(PACKAGE_ROOT, rel);
@@ -218,14 +246,20 @@ describe("design language", () => {
 /** The colour rules, applied to files given as {path relative to web/, text}: the same regexes as above. */
 function colourHits(entries: { rel: string; text: string }[], isUiPackage = false): string[] {
   const palette = new RegExp(`(?<!\\w)(${PALETTES})-\\d{2,3}\\b`);
-  const rules = [palette, /neutral-/, /(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/, /\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/];
+  const rules = [
+    palette,
+    /neutral-/,
+    /(?<![\w&#])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/,
+    /\b(?:oklch|oklab|lab|lch|rgba?|hsla?)\(/,
+  ];
   return entries.flatMap((e) =>
     allowsColours(e.rel, isUiPackage) ? [] : rules.filter((re) => re.test(e.text)).map(() => e.rel),
   );
 }
 
 describe("direct colours are allowed in web/src/colors.css only", () => {
-  const sample = ":root { --brand: var(--color-rose-500); --x: oklch(0.6 0.2 20); --y: #ff0000; } .a { color: neutral-500; }\n.b { @apply bg-rose-500; }";
+  const sample =
+    ":root { --brand: var(--color-rose-500); --x: oklch(0.6 0.2 20); --y: #ff0000; } .a { color: neutral-500; }\n.b { @apply bg-rose-500; }";
   const at = (rel: string, text = sample): string[] => colourHits([{ rel, text }]);
 
   it("passes a palette name, hex, colour function and neutral- in web/src/colors.css", () => {
@@ -234,7 +268,16 @@ describe("direct colours are allowed in web/src/colors.css only", () => {
   });
 
   it("fails the same text in a .tsx, another .css, a nested colors.css and look-alike names", () => {
-    for (const rel of ["src/Card.tsx", "src/index.css", "src/x/colors.css", "src/colors.css.bak", "src/Colors.css", "src/mycolors.css", "colors.css", "src/colors.ts"]) {
+    for (const rel of [
+      "src/Card.tsx",
+      "src/index.css",
+      "src/x/colors.css",
+      "src/colors.css.bak",
+      "src/Colors.css",
+      "src/mycolors.css",
+      "colors.css",
+      "src/colors.ts",
+    ]) {
       expect(at(rel).length, rel).toBeGreaterThan(0);
     }
   });
@@ -260,7 +303,9 @@ describe("direct colours are allowed in web/src/colors.css only", () => {
       const found: string[] = [];
       walk(join(dir, "src"), found);
       const entries = found.map((f) => ({ rel: relative(dir, f), text: readFileSync(f, "utf8") }));
-      expect([...new Set(colourHits(entries))].sort()).toEqual([join("src", "App.tsx"), join("src", "other.css"), join("src", "x", "colors.css")].sort());
+      expect([...new Set(colourHits(entries))].sort()).toEqual(
+        [join("src", "App.tsx"), join("src", "other.css"), join("src", "x", "colors.css")].sort(),
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -284,8 +329,13 @@ describe.skipIf(!IS_UI_PACKAGE)("theme.css (ui package only)", () => {
     expect(all).toContain("#FFFFFF");
     expect(new Set(all)).toEqual(new Set(["#000000", "#FFFFFF"]));
     expect(/@theme static \{\s*--color-ground:\s*#000000;/i.test(css), "dark is the default set").toBe(true);
-    expect(/\n\[data-theme="light"\]\s*\{[\s\S]*?--color-ground:\s*#ffffff;/i.test(css), "light under data-theme").toBe(true);
-    expect(/prefers-color-scheme: light\)[\s\S]*?--color-ground:\s*#ffffff;/i.test(css), "light under the OS query").toBe(true);
+    expect(/\n\[data-theme="light"\]\s*\{[\s\S]*?--color-ground:\s*#ffffff;/i.test(css), "light under data-theme").toBe(
+      true,
+    );
+    expect(
+      /prefers-color-scheme: light\)[\s\S]*?--color-ground:\s*#ffffff;/i.test(css),
+      "light under the OS query",
+    ).toBe(true);
   });
 
   it("declares exactly two type size tokens: body and display", () => {

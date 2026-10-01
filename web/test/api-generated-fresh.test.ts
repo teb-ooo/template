@@ -23,7 +23,8 @@ export function firstDifference(committed: string, generated: string): string {
   const a = committed.split("\n");
   const b = generated.split("\n");
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    if (a[i] !== b[i]) return `line ${i + 1}: committed ${JSON.stringify(a[i] ?? "<end of file>")}, generated ${JSON.stringify(b[i] ?? "<end of file>")}`;
+    if (a[i] !== b[i])
+      return `line ${i + 1}: committed ${JSON.stringify(a[i] ?? "<end of file>")}, generated ${JSON.stringify(b[i] ?? "<end of file>")}`;
   }
   return "no difference";
 }
@@ -32,8 +33,10 @@ export function firstDifference(committed: string, generated: string): string {
 export function schemaProblem(webRoot: string, generate: (specPath: string, outPath: string) => void): string {
   const spec = join(webRoot, "src", "api", "openapi.json");
   const schema = join(webRoot, "src", "api", "schema.d.ts");
-  if (!existsSync(spec)) return `web/src/api/openapi.json is missing: the generated file is missing; run \`npm run gen:api\` and commit it; see docs/web-ui.md`;
-  if (!existsSync(schema)) return `web/src/api/schema.d.ts is missing: the generated file is missing; run \`npm run gen:api\` and commit it; see docs/web-ui.md`;
+  if (!existsSync(spec))
+    return `web/src/api/openapi.json is missing: the generated file is missing; run \`npm run gen:api\` and commit it; see docs/web-ui.md`;
+  if (!existsSync(schema))
+    return `web/src/api/schema.d.ts is missing: the generated file is missing; run \`npm run gen:api\` and commit it; see docs/web-ui.md`;
   const dir = mkdtempSync(join(tmpdir(), "api-fresh-"));
   try {
     const out = join(dir, "schema.d.ts");
@@ -60,7 +63,9 @@ describe("src/api/schema.d.ts is fresh (WEB-18)", () => {
     return;
   }
   it("equals openapi-typescript's output for src/api/openapi.json", () => {
-    expect(existsSync(bin), "node_modules/.bin/openapi-typescript is missing; run `npm ci`; see docs/web-ui.md").toBe(true);
+    expect(existsSync(bin), "node_modules/.bin/openapi-typescript is missing; run `npm ci`; see docs/web-ui.md").toBe(
+      true,
+    );
     expect(schemaProblem(WEB_ROOT, runBin), "WEB-18").toBe("");
   });
 });
