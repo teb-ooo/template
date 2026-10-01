@@ -125,6 +125,7 @@
           },
           "id": {
             "description": "Item id (UUIDv7).",
+            "format": "uuid",
             "type": "string"
           },
           "name": {

@@ -18,7 +18,7 @@ func init() { registrations = append(registrations, registerItems) }
 
 // Item is the API shape of an item.
 type Item struct {
-	ID        uuid.UUID `json:"id" doc:"Item id (UUIDv7)."`
+	ID        uuid.UUID `json:"id" format:"uuid" doc:"Item id (UUIDv7)."`
 	Name      string    `json:"name" doc:"Display name."`
 	CreatedAt time.Time `json:"created_at" doc:"Creation time, RFC 3339 UTC."`
 	UpdatedAt time.Time `json:"updated_at" doc:"Last update time, RFC 3339 UTC."`
