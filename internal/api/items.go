@@ -1,3 +1,7 @@
+// EXAMPLE RESOURCE. This file, its test (items_test.go), its sqlc queries (internal/db/queries/items.sql), the `items`
+// table in migrations/00001_init.sql and the web routes that use them show the pattern for one resource: typed Huma
+// operations, auth, pagination, errors. They are a starting point only. Delete or replace them when real work starts;
+// nothing else depends on them (a table-free query such as `SELECT 1` keeps sqlc generating if you drop the last query).
 package api
 
 import (
