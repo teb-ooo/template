@@ -225,7 +225,7 @@ for (const width of [1280, 1920]) {
   });
 }
 
-// Live data (rule WEB-50). The stream is OFF under a test browser by itself (navigator.webdriver), which is why the
+// Live data (rule UI-7). The stream is OFF under a test browser by itself (navigator.webdriver), which is why the
 // tests above settle on networkidle; these are the dedicated tests that turn it on.
 test("GET /api/live signed out answers 401 problem+json", async ({ request }) => {
   const res = await request.get("/api/live"); // a standalone request context: no session cookie

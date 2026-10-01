@@ -29,7 +29,7 @@ type Deps struct {
 	Mux  *http.ServeMux
 	API  huma.API
 	Q    *db.Queries
-	// Hub tells every open screen that a resource changed (rule WEB-50). After a successful create, update or
+	// Hub tells every open screen that a resource changed (rule UI-7). After a successful create, update or
 	// delete call d.Hub.Publish("widgets", live.Everyone()); the resource name is the first path segment after
 	// /api/ ("widgets" for /api/widgets and /api/widgets/{id}). The stream itself, GET /api/live, is mounted below.
 	Hub *live.Hub

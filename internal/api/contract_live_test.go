@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces WEB-50 (server half): the app serves one live stream, GET /api/live, as a plain mux handler (live.Mount):
+// Enforces UI-7 (server half): the app serves one live stream, GET /api/live, as a plain mux handler (live.Mount):
 //   - it is not an OpenAPI operation, so the OpenAPI document, the MCP tools and the parity check never see it;
 //   - signed out it answers 401 application/problem+json (never a redirect to the sign-in page);
 //   - signed in it answers 200 text/event-stream and the first thing on the wire is the comment ": live", with
@@ -29,7 +29,7 @@ func TestContractLiveStream(t *testing.T) {
 	h, humaAPI := contractAPI(t, contractLazyPool(t, cfg.DatabaseURL), cfg)
 	for path := range humaAPI.OpenAPI().Paths {
 		if strings.HasPrefix(path, "/api/live") {
-			t.Errorf("WEB-50 %s is an OpenAPI operation; the stream is a plain mux handler (live.Mount), not an operation; %s", path, contractSeeDocs)
+			t.Errorf("UI-7 %s is an OpenAPI operation; the stream is a plain mux handler (live.Mount), not an operation; %s", path, contractSeeDocs)
 		}
 	}
 	srv := httptest.NewServer(h)
@@ -42,7 +42,7 @@ func TestContractLiveStream(t *testing.T) {
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized || !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/problem+json") {
-		t.Errorf("WEB-50 GET /api/live signed out answered %d %q, want 401 application/problem+json; %s", resp.StatusCode, resp.Header.Get("Content-Type"), contractSeeDocs)
+		t.Errorf("UI-7 GET /api/live signed out answered %d %q, want 401 application/problem+json; %s", resp.StatusCode, resp.Header.Get("Content-Type"), contractSeeDocs)
 	}
 
 	// Signed in: 200 event stream, first frame ": live".
@@ -56,18 +56,18 @@ func TestContractLiveStream(t *testing.T) {
 	req.AddCookie(cookie)
 	resp, err = srv.Client().Do(req)
 	if err != nil {
-		t.Fatalf("WEB-50 GET /api/live signed in: %v; %s", err, contractSeeDocs)
+		t.Fatalf("UI-7 GET /api/live signed in: %v; %s", err, contractSeeDocs)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
-		t.Fatalf("WEB-50 GET /api/live signed in answered %d %q, want 200 text/event-stream; %s", resp.StatusCode, resp.Header.Get("Content-Type"), contractSeeDocs)
+		t.Fatalf("UI-7 GET /api/live signed in answered %d %q, want 200 text/event-stream; %s", resp.StatusCode, resp.Header.Get("Content-Type"), contractSeeDocs)
 	}
 	if cc := resp.Header.Get("Cache-Control"); !strings.Contains(cc, "no-store") {
-		t.Errorf("WEB-50 GET /api/live Cache-Control = %q, want no-store; %s", cc, contractSeeDocs)
+		t.Errorf("UI-7 GET /api/live Cache-Control = %q, want no-store; %s", cc, contractSeeDocs)
 	}
 	line, err := bufio.NewReader(resp.Body).ReadString('\n')
 	if err != nil || strings.TrimSpace(line) != ": live" {
-		t.Errorf("WEB-50 the first line of /api/live is %q (err %v), want \": live\"; %s", line, err, contractSeeDocs)
+		t.Errorf("UI-7 the first line of /api/live is %q (err %v), want \": live\"; %s", line, err, contractSeeDocs)
 	}
 	cancel() // the stream never ends by itself: stop reading
 }

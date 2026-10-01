@@ -19,7 +19,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 const textLink = "text-ink-muted underline";
 
 function RootLayout() {
-  // Live data (rule WEB-50): the server tells this screen which resource changed (GET /api/live) and the generated
+  // Live data (rule UI-7): the server tells this screen which resource changed (GET /api/live) and the generated
   // queries under it refetch. Call useLive() once, here at the root; it is off by itself under a test browser
   // (navigator.webdriver, or ?live=0). A screen that polls can stop while `status` is "live".
   const { status } = useLive();
