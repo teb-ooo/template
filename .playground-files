@@ -5,6 +5,7 @@
 AGENTS.md
 .claude/rules/playground
 .githooks/pre-commit
+.mcp.json
 .gitleaks.toml
 bin/playground-app
 s6/app/run
