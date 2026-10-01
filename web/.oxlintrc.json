@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "jsx-a11y", "unicorn", "oxc", "import"],
+  "env": { "browser": true, "es2023": true },
+  "categories": { "correctness": "error", "suspicious": "warn" },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-non-null-assertion": "warn",
+    "unicorn/prefer-string-starts-ends-with": "warn",
+    "unicorn/no-array-sort": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "import/no-unassigned-import": "off",
+    "no-underscore-dangle": "off",
+    "eqeqeq": ["warn", "smart"],
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
+  },
+  "ignorePatterns": [
+    "dist",
+    "test-results",
+    "playwright-report",
+    "e2e/__screenshots__",
+    "src/api/schema.d.ts",
+    "src/api/openapi.json",
+    "src/routeTree.gen.ts"
+  ]
+}

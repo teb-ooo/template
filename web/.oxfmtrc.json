@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "ignorePatterns": [
+    "dist",
+    "test-results",
+    "playwright-report",
+    "e2e/__screenshots__",
+    "src/api/schema.d.ts",
+    "src/api/openapi.json",
+    "src/routeTree.gen.ts",
+    "package.json",
+    "package-lock.json",
+    "public"
+  ]
+}

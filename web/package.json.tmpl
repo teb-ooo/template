@@ -13,6 +13,9 @@
     "gen:api": "(cd .. && go run ./cmd/server --print-openapi > web/src/api/openapi.json) && openapi-typescript src/api/openapi.json -o src/api/schema.d.ts",
     "typecheck": "tsr generate && tsc --noEmit",
     "test": "vitest run",
+    "lint": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "test:e2e": "playwright test",
     "gen:routes": "tsr generate"
   },
@@ -42,6 +45,8 @@
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "openapi-typescript": "^7.13.0",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
     "typescript": "6.0.3",
     "vite": "^8.3.0",
     "vitest": "^5.0.0",
