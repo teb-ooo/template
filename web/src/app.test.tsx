@@ -27,16 +27,17 @@ function renderApp(path: string) {
 }
 
 describe("root route", () => {
-  it("renders the header, the signed-in user and the empty state", async () => {
+  it("renders the platform bar with the app name, the page and the empty state, and no header of its own", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
-    expect(screen.getByText("staging")).toBeTruthy();
-    expect(await screen.findByText("ada")).toBeTruthy();
+    const bars = screen.getAllByRole("banner");
+    expect(bars).toHaveLength(1); // the shell's bar is the only header
+    expect(bars[0]?.textContent?.trim()).toBe("sample"); // the app's name is the only text in it
     expect(await screen.findByText(/Nothing here yet/)).toBeTruthy();
   });
 
-  it("opens the command palette with the shortcut and lists the route", async () => {
+  it("opens the command palette with the shortcut and lists the route and the platform commands", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Home" });
@@ -45,18 +46,20 @@ describe("root route", () => {
     expect(box).toBeTruthy();
     // "Go to" reads staticData.title, a route's own commands come from useRegisterCommands.
     expect(screen.getByRole("option", { name: /Home/ })).toBeTruthy();
+    // The shell registers the platform commands (group "Platform"); Sign out only while signed in.
+    expect(await screen.findByRole("option", { name: /sign out/i })).toBeTruthy();
     expect(screen.queryByRole("option", { name: /agent panel/i })).toBeNull();
     // Apps follow the system colour scheme: there is no theme command.
     expect(screen.queryByRole("option", { name: /theme/i })).toBeNull();
     fireEvent.keyDown(box, { key: "Escape" });
   });
 
-  it("shows the live indicator next to the staging label: not live while the stream is off", async () => {
+  it("shows the live dot in the bar: not live while the stream is off", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Home" });
     const dot = screen.getByRole("status", { name: "Not live" });
-    expect(dot.previousElementSibling?.textContent).toBe("staging");
+    expect(screen.getByRole("banner").contains(dot)).toBe(true);
   });
 
   it("reports live once /api/live answers with an event stream", async () => {
@@ -72,48 +75,40 @@ describe("root route", () => {
     expect(await screen.findByRole("status", { name: "Live" })).toBeTruthy();
   });
 
-  // The feedback tool: "Send feedback" is in Cmd+K only for the superadmin or the app's owner (/auth/me), never for
-  // anybody else. (navigator.webdriver is not set in jsdom, so this is the person check alone.)
-  async function paletteHas(me: Record<string, unknown>) {
+  // The feedback tool belongs to the shell: "Send feedback" is in Cmd+K (and an icon in the bar) only for the superadmin or
+  // the app's owner (/auth/me), never for anybody else. (navigator.webdriver is not set in jsdom, so this is the person
+  // check alone.)
+  async function feedbackOffered(me: Record<string, unknown>) {
     server.use(http.get("*/auth/me", () => HttpResponse.json({ ...user, ...me })));
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Home" });
-    await screen.findByText("ada");
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     const box = await screen.findByRole("combobox");
-    await screen.findByRole("option", { name: /Home/ });
-    const found = screen.queryByRole("option", { name: /send feedback/i }) !== null;
+    await screen.findByRole("option", { name: /sign out/i }); // the person is known
+    const inPalette = screen.queryByRole("option", { name: /send feedback/i }) !== null;
     fireEvent.keyDown(box, { key: "Escape" });
-    return found;
+    return inPalette;
   }
 
   it("offers Send feedback in the palette to the app's owner", async () => {
-    expect(await paletteHas({ is_owner: true })).toBe(true);
+    expect(await feedbackOffered({ is_owner: true })).toBe(true);
   });
 
   it("offers Send feedback in the palette to the superadmin", async () => {
-    expect(await paletteHas({ is_admin: true })).toBe(true);
+    expect(await feedbackOffered({ is_admin: true })).toBe(true);
   });
 
   it("does not offer Send feedback to anybody else", async () => {
-    expect(await paletteHas({})).toBe(false);
+    expect(await feedbackOffered({})).toBe(false);
     cleanup();
-    expect(await paletteHas({ is_owner: false, is_admin: false })).toBe(false);
-  });
-
-  it("has no feedback button in the header", async () => {
-    server.use(http.get("*/auth/me", () => HttpResponse.json({ ...user, is_owner: true })));
-    setPlayground({ app_name: "sample", env: "staging" });
-    renderApp("/");
-    await screen.findByText("ada");
-    expect(screen.queryByRole("button", { name: /feedback/i })).toBeNull();
+    expect(await feedbackOffered({ is_owner: false, is_admin: false })).toBe(false);
   });
 
   it("is off under a test browser (navigator.webdriver)", async () => {
     Object.defineProperty(navigator, "webdriver", { value: true, configurable: true });
     try {
-      expect(await paletteHas({ is_owner: true })).toBe(false);
+      expect(await feedbackOffered({ is_owner: true })).toBe(false);
     } finally {
       Reflect.deleteProperty(navigator, "webdriver");
     }

@@ -36,7 +36,7 @@ function ownAppName(): string {
   const p = join(PACKAGE_ROOT, "..", "playground.yaml");
   if (!existsSync(p)) return "";
   const m = /^name:\s*["']?([A-Za-z0-9-]+)["']?\s*$/m.exec(readFileSync(p, "utf8"));
-  return m ? m[1].toLowerCase() : "";
+  return m?.[1] ? m[1].toLowerCase() : "";
 }
 
 /** The only file that may name palette values, and only inside the ui package. */

@@ -127,7 +127,11 @@ test.describe("command palette", () => {
     const goTo = page.getByRole("group", { name: "Go to" }).getByRole("option");
     await expect(goTo).toHaveCount(navigable.length);
 
-    // Apps follow the system colour scheme: the palette has no theme command and the header no theme control.
+    // The shell registers the platform commands, a group of their own (docs/shell.md): Sign out while signed in. Send feedback
+    // is the owner's and is off under a test browser (Playwright sets navigator.webdriver).
+    await expect(page.getByRole("group", { name: "Platform" }).getByRole("option", { name: /Sign out/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /send feedback/i })).toHaveCount(0);
+    // Apps follow the system colour scheme: the palette has no theme command and the bar no theme control.
     await expect(page.getByRole("option", { name: /theme/i })).toHaveCount(0);
     await expect(page.getByRole("option", { name: /agent panel/i })).toHaveCount(0); // the in-browser terminal is gone
     const claudeApp = page.getByRole("option", { name: /Open in Claude app/ });
@@ -147,8 +151,8 @@ test.describe("command palette", () => {
   test("there is no theme toggle anywhere in the app", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    await expect(page.locator("header").getByText(/theme/i)).toHaveCount(0);
-    await expect(page.locator("header").getByRole("button", { name: /theme|dark|light/i })).toHaveCount(0);
+    await expect(page.getByRole("banner").getByText(/theme/i)).toHaveCount(0);
+    await expect(page.getByRole("banner").getByRole("button", { name: /theme|dark|light/i })).toHaveCount(0);
     await expect(page.locator("[aria-label*='theme' i], [data-testid*='theme' i]")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.hasAttribute("data-theme"))).toBe(false);
   });
@@ -186,16 +190,29 @@ test("signed out: the start page navigates to /auth/login instead of rendering n
   await expect(page.getByText("There is nothing at this address.")).toHaveCount(0);
 });
 
-// Phones: the header stays on one row, the page does not scroll sideways, and the palette sheet can be closed by touch.
+/**
+ * The platform bar (docs/shell.md): the shell's one top bar is the only banner, at most 24px high on one line, its
+ * only text is the app's name, and every control in it has an accessible name. The app adds nothing to it.
+ */
+async function expectSlimBar(page: import("@playwright/test").Page): Promise<void> {
+  const bars = page.getByRole("banner");
+  await expect(bars).toHaveCount(1);
+  const box = await bars.boundingBox();
+  expect(box?.height ?? Infinity).toBeLessThanOrEqual(24);
+  expect(box?.height ?? 0).toBeGreaterThan(0);
+  expect((await bars.innerText()).trim()).not.toContain("\n");
+  for (const b of await bars.getByRole("button").all()) expect(await b.getAttribute("aria-label")).toBeTruthy();
+}
+
+// Phones: the bar stays on one row, the page does not scroll sideways, and the palette sheet can be closed by touch.
 test.describe("390px", () => {
   test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("the header does not wrap, nothing overflows, the palette sheet closes with its Close button", async ({ page }) => {
+  test("the bar does not wrap, nothing overflows, the palette sheet closes with its Close button", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    const header = await page.locator("header").boundingBox();
-    expect(header?.height ?? Infinity).toBeLessThan(60);
+    await expectSlimBar(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
     await page.getByRole("button", { name: "Open command palette" }).click();
@@ -208,18 +225,17 @@ test.describe("390px", () => {
 });
 
 // Desktops: the app is a real desktop interface too (owner decision 2026-09-30), not a stretched phone layout.
-// At 1280 and 1920 the header stays on one row and the page does not scroll sideways; app-specific desktop layout tests
+// At 1280 and 1920 the bar stays on one row and the page does not scroll sideways; app-specific desktop layout tests
 // (sidebar, tables, detail panes) belong next to the screens that have them.
 for (const width of [1280, 1920]) {
   test.describe(`${width}px`, () => {
     test.skip(!sessionCookie, "SESSION_COOKIE is not set: the start page redirects to sign-in");
     test.use({ viewport: { width, height: 900 } });
 
-    test("the header does not wrap and nothing overflows", async ({ page }) => {
+    test("the bar does not wrap and nothing overflows", async ({ page }) => {
       await page.goto("/");
       await page.waitForLoadState("networkidle");
-      const header = await page.locator("header").boundingBox();
-      expect(header?.height ?? Infinity).toBeLessThan(60);
+      await expectSlimBar(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     });
   });
