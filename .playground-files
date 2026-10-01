@@ -20,6 +20,8 @@ s6/user/type
 s6/web-dev/run
 s6/web-dev/type
 web/.npmrc
+web/.oxlintrc.json
+web/.oxfmtrc.json
 web/test/api-generated-fresh.test.ts
 web/test/design.test.ts
 web/test/spec-import.test.ts
