@@ -194,7 +194,7 @@ describe("design language", () => {
     // The app's own name is never "another product": an app called Lore may say Lore. Apps carry it in playground.yaml
     // (one level above web/); the ui package has none and bans the full list.
     const own = ownAppName();
-    const banned = ["lore", "ory", "kratos", "hydra", "resend", "postmark", "pocket-?id", "tiptap"].filter((n) => n !== own);
+    const banned = ["lore", "ory", "kratos", "hydra", "resend", "postmark", "pocket-?id", "tiptap"].filter((n) => n !== own && (IS_UI_PACKAGE || n !== "tiptap"));   // an app may use the TipTap editor library (its @tiptap/* imports and .tiptap class are code, not copy); only the ui package stays free of it
     const names = new RegExp(`\\b(${banned.join("|")})\\b`, "i");
     expectNone(find(names), "nothing shipped names another product");
     if (IS_UI_PACKAGE) {
