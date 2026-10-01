@@ -24,6 +24,12 @@ CREATE TABLE assistant_messages (
 CREATE INDEX assistant_messages_conversation_idx
     ON assistant_messages (conversation_id, id);
 
+-- DAT-7: every table keeps updated_at current (set_updated_at() comes from the app's first migration).
+CREATE TRIGGER assistant_conversations_set_updated_at BEFORE UPDATE ON assistant_conversations
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER assistant_messages_set_updated_at BEFORE UPDATE ON assistant_messages
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- +goose Down
 DROP TABLE assistant_messages;
 DROP TABLE assistant_conversations;

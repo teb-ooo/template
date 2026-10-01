@@ -30,6 +30,15 @@ function readPackageName(): string | null {
 }
 
 const IS_UI_PACKAGE = readPackageName() === "@teb-ooo/ui";
+
+/** The app's own name, lower case, from playground.yaml (`name:`); "" for the ui package or when there is no such file. */
+function ownAppName(): string {
+  const p = join(PACKAGE_ROOT, "..", "playground.yaml");
+  if (!existsSync(p)) return "";
+  const m = /^name:\s*["']?([A-Za-z0-9-]+)["']?\s*$/m.exec(readFileSync(p, "utf8"));
+  return m ? m[1].toLowerCase() : "";
+}
+
 /** The only file that may name palette values, and only inside the ui package. */
 const THEME_FILE = "theme.css";
 const THEME_PATH = join(PACKAGE_ROOT, THEME_FILE);
@@ -182,7 +191,11 @@ describe("design language", () => {
   });
 
   it("mentions no other product by name", () => {
-    const names = /\b(lore|ory|kratos|hydra|resend|postmark|pocket-?id|tiptap)\b/i;
+    // The app's own name is never "another product": an app called Lore may say Lore. Apps carry it in playground.yaml
+    // (one level above web/); the ui package has none and bans the full list.
+    const own = ownAppName();
+    const banned = ["lore", "ory", "kratos", "hydra", "resend", "postmark", "pocket-?id", "tiptap"].filter((n) => n !== own);
+    const names = new RegExp(`\\b(${banned.join("|")})\\b`, "i");
     expectNone(find(names), "nothing shipped names another product");
     if (IS_UI_PACKAGE) {
       const extra = ["README.md", "package.json", "theme-init.js", ...listDir("docs", /\.md$/), ...listDir("email", /./)];
