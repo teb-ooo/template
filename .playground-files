@@ -21,6 +21,7 @@ s6/web-dev/type
 web/.npmrc
 web/test/design.test.ts
 web/test/spec-import.test.ts
+web/test/typescript-strict.test.ts
 internal/api/contract_auth_test.go
 internal/api/contract_schema_test.go
 internal/api/contract_smoke_test.go
