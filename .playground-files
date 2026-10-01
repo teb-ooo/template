@@ -27,6 +27,7 @@ web/test/state-libs.test.ts
 web/test/no-raw-fetch.test.ts
 internal/api/contract_auth_test.go
 internal/api/contract_db_test.go
+internal/api/contract_readme_test.go
 internal/api/contract_db_helper_test.go
 internal/api/contract_schema_test.go
 internal/api/contract_smoke_test.go
