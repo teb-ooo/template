@@ -1,0 +1,7 @@
+{{.Heading}}
+
+{{.Intro}}
+{{if .Code}}
+code: {{.Code}}
+{{end}}
+{{.ActionLabel}}: {{.ActionURL}}
