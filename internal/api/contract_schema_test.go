@@ -10,13 +10,12 @@
 // To fix a failure add a NEW migration (never edit a promoted one): ALTER TABLE ... ADD COLUMN / ALTER COLUMN ... TYPE
 // timestamptz, and CREATE TRIGGER <table>_set_updated_at BEFORE UPDATE ON <table> FOR EACH ROW EXECUTE FUNCTION
 // set_updated_at(); (create the function first with the body from the template's 00001_init.sql if the app lacks it).
-// The test is skipped without PLAYGROUND_TEST_DATABASE_URL (the gate and playground-app test set it).
+// The database comes from requireTestDB (contract_db_test.go): bin/playground-app test provides it and fails, not skips, without it.
 package api
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -36,10 +35,7 @@ const contractSeeDocs = "see docs/go-api.md"
 // contractMigratedPool migrates a fresh schema of the throwaway database and returns a pool bound to it.
 func contractMigratedPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	url := os.Getenv("PLAYGROUND_TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("PLAYGROUND_TEST_DATABASE_URL is not set")
-	}
+	url := requireTestDB(t)
 	ctx := context.Background()
 	schema := "c_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	admin, err := pgxpool.New(ctx, url)

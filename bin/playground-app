@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # playground-app restart | build | test | smoke | gate-check | status
+#   test        .npmrc and release-age checks, go vet, go test with PLAYGROUND_TEST_DATABASE_URL (default: DATABASE_URL, the
+#               staging database; only a throwaway c_<uuid> schema is created and dropped) and PLAYGROUND_REQUIRE_DB=1, then
+#               "contract tests: N ran, M skipped"; a contract test that cannot run FAILS (never skips). restart and gate-check run it too.
 #   gate-check  rehearse the promotion gate before you tag: build the server, start it on a spare port with the
 #               CANDIDATE's environment (no PLAYD_TOKEN, PLAYD_URL, STAGING_GATE_TOKEN or other platform credentials,
 #               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
@@ -8,6 +11,25 @@
 case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
 set -euo pipefail
 cd "${PLAYGROUND_APP_DIR:-/app}"
+# go_tests: go vet and go test, with the contract tests' database provided and required. PLAYGROUND_TEST_DATABASE_URL
+# defaults to the app's DATABASE_URL (staging; the tests only create and drop a throwaway c_<uuid> schema); it is never
+# printed. PLAYGROUND_REQUIRE_DB=1 makes a missing database a test failure, not a skip. Then it prints
+# "contract tests: N ran, M skipped" from a second, verbose run of the Contract tests and fails if any was skipped.
+go_tests() {
+  if [ -z "${PLAYGROUND_TEST_DATABASE_URL:-}" ] && [ -n "${DATABASE_URL:-}" ]; then PLAYGROUND_TEST_DATABASE_URL=$DATABASE_URL; fi
+  [ -n "${PLAYGROUND_TEST_DATABASE_URL:-}" ] && export PLAYGROUND_TEST_DATABASE_URL
+  export PLAYGROUND_REQUIRE_DB=1
+  go vet ./... && go test ./... || return 1
+  local out rc=0 ran skipped
+  out=$(mktemp "${TMPDIR:-/tmp}/contract-tests.XXXXXX")
+  go test -count=1 -run Contract -v ./... >"$out" 2>&1 || rc=$?
+  if [ "$rc" -ne 0 ]; then grep -v '^=== ' "$out" | tail -n 40 >&2; rm -f "$out"; echo "contract tests: FAILED" >&2; return 1; fi
+  ran=$(grep -c '^--- PASS: ' "$out" || true); skipped=$(grep -c '^--- SKIP: ' "$out" || true)
+  if [ "$skipped" -gt 0 ]; then grep -A2 '^--- SKIP: ' "$out" >&2; fi
+  rm -f "$out"
+  echo "contract tests: $ran ran, $skipped skipped"
+  if [ "$skipped" -gt 0 ]; then echo "contract tests: $skipped skipped with PLAYGROUND_REQUIRE_DB=1: they must run (see docs/go-api.md)" >&2; return 1; fi
+}
 case "${1:-}" in
   build)
     (cd web && npm ci --silent && npm run build)
@@ -22,7 +44,7 @@ case "${1:-}" in
     # the npm release-age gate (BOOTSTRAP 7): the checker and canonical .npmrc live in the read-only rules mount
     cmp -s /playground/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /playground/rules/npmrc: do not edit it" >&2; exit 1; }
     node /playground/rules/tools/check-release-age.mjs web
-    go vet ./... && go test ./... ;;
+    go_tests ;;
   smoke)
     # Browser smoke test (BOOTSTRAP 9.12): Playwright drives the Chrome agent-browser installed.
     # Mint a session cookie for the running app (SESSION_KEY is in the container env) so the palette, theme and
@@ -54,6 +76,8 @@ case "${1:-}" in
     node /playground/rules/tools/check-no-eval.mjs web/dist
     node /playground/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
+    echo "gate-check: go vet and go test (the contract tests included)"
+    go_tests || exit 1
     CGO_ENABLED=0 go build -ldflags "-X main.version=gate-check" -o "$GC/server" ./cmd/server
     # a spare port: the first one nothing listens on
     GC_PORT=""

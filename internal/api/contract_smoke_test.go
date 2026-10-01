@@ -9,7 +9,7 @@
 // unavailable state. A panic fails the test.
 // To fix a failure: check for the missing client, URL or token before using it and return
 // huma.Error503ServiceUnavailable("<service> is not configured") instead of an internal error; never panic on config.
-// The test is skipped without PLAYGROUND_TEST_DATABASE_URL.
+// The database comes from requireTestDB (contract_db_test.go): bin/playground-app test provides it and fails, not skips, without it.
 package api
 
 import (
