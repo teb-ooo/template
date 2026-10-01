@@ -78,8 +78,13 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 		register(d)
 	}
 
-	mcpH := openapimcp.Handler(humaAPI, mux, openapimcp.Options{Name: cfg.AppName, Auth: authn.BearerOrSession})
+	// MCPOptions wires the caller's identity and the OAuth discovery MCP clients use to sign in; platform API keys (pk_)
+	// are accepted by cfg.NewAuth with no app code, and tools are filtered by the key's scopes.
+	mcpH := openapimcp.Handler(humaAPI, mux, cfg.MCPOptions(authn))
 	mux.Handle("/mcp", mcpH)
+	if s, ok := mcpH.(*openapimcp.Server); ok {
+		s.RegisterMetadata(mux) // /.well-known/oauth-protected-resource
+	}
 	for _, mount := range mounts {
 		mount(d)
 	}
