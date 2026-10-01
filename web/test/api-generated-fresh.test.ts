@@ -90,7 +90,8 @@ describe("the schema freshness checker", () => {
   });
 
   it("fails when openapi.json or schema.d.ts is missing", () => {
-    for (const files of [{ "src/api/schema.d.ts": "A" }, { "src/api/openapi.json": "a" }]) {
+    const cases: Record<string, string>[] = [{ "src/api/schema.d.ts": "A" }, { "src/api/openapi.json": "a" }];
+    for (const files of cases) {
       const msg = schemaProblem(tree(files), upper);
       expect(msg).toContain("is missing");
       expect(msg.endsWith("see docs/web-ui.md")).toBe(true);
