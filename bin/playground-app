@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-# playground-app restart | build | test | status
+# playground-app restart | build | test | smoke | gate-check | status
+#   gate-check  rehearse the promotion gate before you tag: build the server, start it on a spare port with the
+#               CANDIDATE's environment (no PLAYD_TOKEN, PLAYD_URL, STAGING_GATE_TOKEN or other platform credentials,
+#               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
+#               and run `npm run test:e2e` against it. Prints GATE-CHECK PASS or FAIL and exits non-zero on failure.
+#               It never touches the running staging app or its data. Run it before every `playground promote` tag.
+case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
 set -euo pipefail
-cd /app
+cd "${PLAYGROUND_APP_DIR:-/app}"
 case "${1:-}" in
   build)
     (cd web && npm ci --silent && npm run build)
@@ -26,6 +32,71 @@ case "${1:-}" in
       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome 2>/dev/null | tail -n1 || true); export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     fi
     (cd web && npm run test:e2e) ;;
+  gate-check)
+    # Rehearsal of the promotion gate (cli/internal/appsvc/promote.go verifyCandidate): the gate runs the browser
+    # smoke test against a candidate container that has NO platform credentials, so any route that needs playd, the
+    # registry or another platform service must degrade to a clear "unavailable" state (not a 500/503 the smoke
+    # test sees). Differences from the real gate: this runs the Go binary (not the production image), in the staging
+    # container, with a throwaway schema (not a throwaway database), on localhost (not a throwaway network), and
+    # skips `npm ci` when node_modules exists.
+    GC=$(mktemp -d "${TMPDIR:-/tmp}/gate-check.XXXXXX")
+    GC_PID=""; GC_SCHEMA=""; GC_RESULT=FAIL
+    gc_cleanup() {
+      [ -n "$GC_PID" ] && kill "$GC_PID" 2>/dev/null && wait "$GC_PID" 2>/dev/null || true
+      if [ -n "$GC_SCHEMA" ]; then psql "$DATABASE_URL" -qAtc "DROP SCHEMA IF EXISTS $GC_SCHEMA CASCADE" >/dev/null 2>&1 || echo "gate-check: could not drop throwaway schema $GC_SCHEMA" >&2; fi
+      rm -rf "$GC"
+      echo "GATE-CHECK $GC_RESULT"
+    }
+    trap gc_cleanup EXIT
+    : "${DATABASE_URL:?DATABASE_URL is not set}"
+    echo "gate-check: building the server"
+    (cd web && { [ -d node_modules ] || npm ci --silent; } && npm run build >/dev/null)
+    node /playground/rules/tools/check-no-eval.mjs web/dist
+    node /playground/rules/tools/check-no-dev.mjs web/dist
+    go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
+    CGO_ENABLED=0 go build -ldflags "-X main.version=gate-check" -o "$GC/server" ./cmd/server
+    # a spare port: the first one nothing listens on
+    GC_PORT=""
+    for p in $(seq 18100 18199); do (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null || { GC_PORT=$p; break; }; done
+    [ -n "$GC_PORT" ] || { echo "gate-check: no spare port in 18100-18199" >&2; exit 1; }
+    GC_SCHEMA="gc_$(head -c6 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    GC_KEY=$(head -c32 /dev/urandom | base64)
+    psql "$DATABASE_URL" -qAtc "CREATE SCHEMA $GC_SCHEMA" >/dev/null || { GC_SCHEMA=""; echo "gate-check: cannot create a throwaway schema in the app database" >&2; exit 1; }
+    case "$DATABASE_URL" in *\?*) GC_DB="$DATABASE_URL&search_path=$GC_SCHEMA" ;; *) GC_DB="$DATABASE_URL?search_path=$GC_SCHEMA" ;; esac
+    # The candidate's environment: the production env minus platform credentials (gate: DATABASE_URL, SESSION_KEY and
+    # MAIL_API_KEY replaced, ANTHROPIC_API_KEY and PLAYD_TOKEN removed). PLAYD_URL and the other platform variables are
+    # removed too, stricter than the gate, so a route that needs the platform fails here as it would there.
+    GC_ENV=(env -u PLAYD_TOKEN -u PLAYD_URL -u PLAYD_ASSERTION_KEY -u STAGING_GATE_TOKEN -u ANTHROPIC_API_KEY
+      -u BEADS_DOLT_PASSWORD -u CSP_NONCE
+      APP_ENV=production PORT="$GC_PORT" DATABASE_URL="$GC_DB" SESSION_KEY="$GC_KEY" MAIL_API_KEY=disabled-in-promotion-candidate)
+    "${GC_ENV[@]}" "$GC/server" >"$GC/server.log" 2>&1 &
+    GC_PID=$!
+    echo "gate-check: candidate on 127.0.0.1:$GC_PORT (throwaway schema, no platform credentials)"
+    for i in $(seq 1 60); do
+      curl -sf "http://127.0.0.1:$GC_PORT/healthz" >/dev/null && break
+      kill -0 "$GC_PID" 2>/dev/null || { echo "gate-check: the candidate exited; last log lines:" >&2; tail -n 15 "$GC/server.log" >&2; exit 1; }
+      [ "$i" = 60 ] && { echo "gate-check: the candidate did not become healthy; last log lines:" >&2; tail -n 15 "$GC/server.log" >&2; exit 1; }
+      sleep 1
+    done
+    # The gate mints the cookie with the candidate's SESSION_KEY: an app's own cmd/mintsession (APP_ENV=staging, as the
+    # gate runs it) or the generic one.
+    if [ -f cmd/mintsession/main.go ]; then
+      SESSION_COOKIE=$(env -u PLAYD_TOKEN -u PLAYD_URL -u STAGING_GATE_TOKEN APP_ENV=staging SESSION_KEY="$GC_KEY" go run ./cmd/mintsession) || { echo "gate-check: could not mint a session cookie" >&2; exit 1; }
+    else
+      SESSION_COOKIE=""
+    fi
+    if [ -z "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome 2>/dev/null | tail -n1 || true)
+    fi
+    echo "gate-check: browser smoke test (npm run test:e2e)"
+    set +e
+    (cd web && env -u PLAYD_TOKEN -u PLAYD_URL -u PLAYD_ASSERTION_KEY -u STAGING_GATE_TOKEN -u ANTHROPIC_API_KEY \
+      BASE_URL="http://127.0.0.1:$GC_PORT" SESSION_COOKIE="$SESSION_COOKIE" SESSION_KEY="$GC_KEY" CI=1 \
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" npm run test:e2e)
+    rc=$?
+    set -e
+    if [ "$rc" -eq 0 ]; then GC_RESULT=PASS; else echo "gate-check: the candidate's last log lines:" >&2; tail -n 10 "$GC/server.log" >&2; fi
+    exit "$rc" ;;
   restart)
     "$0" build && "$0" test
     mv /app/bin/server.new /app/bin/server
@@ -37,5 +108,5 @@ case "${1:-}" in
     echo "up"
     "$0" smoke ;;
   status) s6-svstat /run/service/app /run/service/claude ;;
-  *) echo "usage: playground-app build|test|smoke|restart|status" >&2; exit 2 ;;
+  *) echo "usage: playground-app build|test|smoke|gate-check|restart|status" >&2; exit 2 ;;
 esac
