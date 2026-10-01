@@ -15,9 +15,19 @@
     "unicorn/consistent-function-scoping": "off",
     "import/no-unassigned-import": "off",
     "no-underscore-dangle": "off",
+    "react/refs": "warn",
+    "react/set-state-in-effect": "warn",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/no-autofocus": "warn",
     "eqeqeq": ["warn", "smart"],
     "no-console": ["warn", { "allow": ["warn", "error"] }]
   },
+  "overrides": [
+    {
+      "files": ["test/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"],
+      "rules": { "typescript/no-non-null-assertion": "off" }
+    }
+  ],
   "ignorePatterns": [
     "dist",
     "test-results",

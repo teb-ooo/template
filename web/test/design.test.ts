@@ -62,7 +62,7 @@ function walk(dir: string, out: string[]): void {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) {
       if (!SKIP_DIRS.has(name)) walk(p, out);
-    } else if (/\.(ts|tsx|css)$/.test(name) && !/\.d\.ts$/.test(name) && !/\.test\.tsx?$/.test(name)) {
+    } else if (/\.(ts|tsx|css)$/.test(name) && !name.endsWith(".d.ts") && !/\.test\.tsx?$/.test(name)) {
       out.push(p);
     }
   }
@@ -78,7 +78,7 @@ function sourceFiles(): string[] {
 const files = sourceFiles();
 const isTheme = (f: string): boolean => IS_UI_PACKAGE && f === THEME_PATH;
 const isComponentSource = (f: string): boolean =>
-  IS_UI_PACKAGE && f.includes(`${sep}components${sep}`) && !/\.stories\.tsx$/.test(f);
+  IS_UI_PACKAGE && f.includes(`${sep}components${sep}`) && !f.endsWith(".stories.tsx");
 const shown = (f: string): string => relative(PACKAGE_ROOT, f);
 /** Exact, path-relative match: `web/src/colors.css` only (not a prefix, a glob, or a nested or renamed file). */
 const allowsColours = (rel: string, isUiPackage: boolean): boolean =>
