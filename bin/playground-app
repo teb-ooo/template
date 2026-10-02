@@ -136,6 +136,8 @@ case "${1:-}" in
     # the npm release-age gate (BOOTSTRAP 7): the checker and canonical .npmrc live in the read-only rules mount
     cmp -s /playground/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /playground/rules/npmrc: do not edit it" >&2; exit 1; }
     node /playground/rules/tools/check-release-age.mjs web
+    # the web unit and contract tests (design system, platform shell, generated API, no raw fetch, ...): vitest, a few seconds
+    (cd web && web_install && npm test --silent) || { echo "web tests: FAILED" >&2; exit 1; }
     go_tests ;;
   smoke)
     # Browser smoke test (BOOTSTRAP 9.12): Playwright drives the Chrome agent-browser installed.
