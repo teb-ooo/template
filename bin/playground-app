@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# playground-app restart | build | test | smoke | gate-check | status | promote <vX.Y.Z>
+# playground-app restart [--quick] | build | test | smoke [--grep <pattern>] | gate-check | status | promote <vX.Y.Z>
+#   restart     build + tests + swap the Go server + the full browser smoke test. `restart --quick` stops after the swap (no browser sweep): use it for Go, API,
+#               dependency and migration changes while you iterate; the full sweep is for `gate-check` before a tag. A frontend-only change needs neither: the
+#               dev server (HMR) already serves it, so check it there with the type check, the unit tests and `smoke --grep <the flow>`.
+#   build       `npm ci` runs only when web/package-lock.json changed since the last install (a needless `npm ci` wipes node_modules and
+#               restarts the Vite dev server under you).
+#   smoke       the browser tests; `smoke --grep <pattern>` runs only the tests whose title matches (Playwright --grep).
 #   test        .npmrc and release-age checks, go vet, go test with PLAYGROUND_TEST_DATABASE_URL (default: DATABASE_URL, the
 #               staging database; only a throwaway c_<uuid> schema is created and dropped) and PLAYGROUND_REQUIRE_DB=1, then
 #               "contract tests: N ran, M skipped"; a contract test that cannot run FAILS (never skips). restart and gate-check run it too.
@@ -76,6 +82,20 @@ promote_tag() {
   [ -n "$done_seen" ] || { echo "promote: the job stream ended before the job finished; check \`playground-app status\` and the staging logs, do not retry blindly" >&2; return 1; }
   return "$rc"
 }
+# web_install (run in web/): `npm ci` only when package-lock.json differs from the one node_modules was installed from. npm ci deletes
+# node_modules, which restarts the Vite dev server (web-dev) and breaks HMR, so a build that needs no install must not do it.
+web_install() {
+  local want have
+  want=$(sha256sum package-lock.json | cut -d' ' -f1)
+  have=$(cat node_modules/.playground/lock.sha256 2>/dev/null || true)
+  if [ -d node_modules ] && [ -x node_modules/.bin/vite ] && [ "$want" = "$have" ]; then return 0; fi
+  npm ci --silent || return 1
+  mkdir -p node_modules/.playground && printf '%s\n' "$want" > node_modules/.playground/lock.sha256
+}
+# tree_id: identifies the exact committed-plus-uncommitted tree (HEAD and a hash of the working-tree diff, untracked files included).
+tree_id() {
+  { git rev-parse HEAD 2>/dev/null; git diff HEAD 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null | sort | xargs -r sha256sum 2>/dev/null; } | sha256sum | cut -d' ' -f1
+}
 # go_tests: go vet and go test, with the contract tests' database provided and required. PLAYGROUND_TEST_DATABASE_URL
 # defaults to the app's DATABASE_URL (staging; the tests only create and drop a throwaway c_<uuid> schema); it is never
 # printed. PLAYGROUND_REQUIRE_DB=1 makes a missing database a test failure, not a skip. Then it prints
@@ -84,20 +104,27 @@ go_tests() {
   if [ -z "${PLAYGROUND_TEST_DATABASE_URL:-}" ] && [ -n "${DATABASE_URL:-}" ]; then PLAYGROUND_TEST_DATABASE_URL=$DATABASE_URL; fi
   [ -n "${PLAYGROUND_TEST_DATABASE_URL:-}" ] && export PLAYGROUND_TEST_DATABASE_URL
   export PLAYGROUND_REQUIRE_DB=1
-  go vet ./... && go test ./... || return 1
+  local stamp=node_modules/.playground/go-tests.stamp id=""
+  if [ "${1:-}" = --reuse ] && [ -f "web/$stamp" ] && [ "$(cat "web/$stamp")" = "$(tree_id)" ]; then
+    echo "go vet and go test: already passed on this exact tree (restart), not repeated"; return 0
+  fi
+  id=$(tree_id)
+  go vet ./... || return 1
+  # one verbose run of everything: the contract tests are counted from it, not run a second time
   local out rc=0 ran skipped
-  out=$(mktemp "${TMPDIR:-/tmp}/contract-tests.XXXXXX")
-  go test -count=1 -run Contract -v ./... >"$out" 2>&1 || rc=$?
-  if [ "$rc" -ne 0 ]; then grep -v '^=== ' "$out" | tail -n 40 >&2; rm -f "$out"; echo "contract tests: FAILED" >&2; return 1; fi
-  ran=$(grep -c '^--- PASS: ' "$out" || true); skipped=$(grep -c '^--- SKIP: ' "$out" || true)
-  if [ "$skipped" -gt 0 ]; then grep -A2 '^--- SKIP: ' "$out" >&2; fi
+  out=$(mktemp "${TMPDIR:-/tmp}/go-tests.XXXXXX")
+  go test -count=1 -v ./... >"$out" 2>&1 || rc=$?
+  if [ "$rc" -ne 0 ]; then grep -v -E '^(=== |--- PASS|PASS$|ok )' "$out" | tail -n 60 >&2; rm -f "$out"; echo "go test: FAILED" >&2; return 1; fi
+  ran=$(grep -c -E '^--- PASS: .*Contract' "$out" || true); skipped=$(grep -c -E '^--- SKIP: .*Contract' "$out" || true)
+  if [ "$skipped" -gt 0 ]; then grep -A2 -E '^--- SKIP: .*Contract' "$out" >&2; fi
   rm -f "$out"
   echo "contract tests: $ran ran, $skipped skipped"
   if [ "$skipped" -gt 0 ]; then echo "contract tests: $skipped skipped with PLAYGROUND_REQUIRE_DB=1: they must run (see docs/go-api.md)" >&2; return 1; fi
+  mkdir -p "web/node_modules/.playground" && printf '%s\n' "$id" > "web/$stamp"
 }
 case "${1:-}" in
   build)
-    (cd web && npm ci --silent && npm run build)
+    (cd web && web_install && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
     node /playground/rules/tools/check-no-eval.mjs web/dist
     # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
@@ -118,7 +145,7 @@ case "${1:-}" in
     if [ -z "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]; then
       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome 2>/dev/null | tail -n1 || true); export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     fi
-    (cd web && npm run test:e2e) ;;
+    if [ "${2:-}" = --grep ]; then [ -n "${3:-}" ] || { echo "usage: playground-app smoke --grep <pattern>" >&2; exit 2; }; (cd web && npm run test:e2e -- --grep "$3"); else (cd web && npm run test:e2e); fi ;;
   gate-check)
     # Rehearsal of the promotion gate (cli/internal/appsvc/promote.go verifyCandidate): the gate runs the browser
     # smoke test against a candidate container that has NO platform credentials, so any route that needs playd, the
@@ -137,12 +164,12 @@ case "${1:-}" in
     trap gc_cleanup EXIT
     : "${DATABASE_URL:?DATABASE_URL is not set}"
     echo "gate-check: building the server"
-    (cd web && { [ -d node_modules ] || npm ci --silent; } && npm run build >/dev/null)
+    (cd web && web_install && npm run build >/dev/null)
     node /playground/rules/tools/check-no-eval.mjs web/dist
     node /playground/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
     echo "gate-check: go vet and go test (the contract tests included)"
-    go_tests || exit 1
+    go_tests --reuse || exit 1
     CGO_ENABLED=0 go build -ldflags "-X main.version=gate-check" -o "$GC/server" ./cmd/server
     # a spare port: the first one nothing listens on
     GC_PORT=""
@@ -195,11 +222,12 @@ case "${1:-}" in
     sleep 1
     for i in $(seq 1 30); do curl -sf localhost:8080/healthz >/dev/null && break; sleep 1; [ "$i" = 30 ] && { echo "app did not come up; check logs: /run/service/app" >&2; exit 1; }; done
     echo "up"
+    if [ "${2:-}" = --quick ]; then echo "restart --quick: no browser sweep; run \`playground-app smoke --grep <flow>\` for what you changed and gate-check before a tag"; exit 0; fi
     "$0" smoke ;;
   status)
     rc=0; s6-svstat /run/service/app /run/service/claude || rc=$?
     echo "promotion: $(promotion_mode)"
     exit "$rc" ;;
   promote) promote_tag "${2:-}"; exit $? ;;
-  *) echo "usage: playground-app build|test|smoke|gate-check|restart|status|promote <vX.Y.Z>" >&2; exit 2 ;;
+  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|promote <vX.Y.Z>" >&2; exit 2 ;;
 esac
