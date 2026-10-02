@@ -1,5 +1,5 @@
 /**
- * The playground's OpenAPI-spec import test (rule WEB-20).
+ * The playground's OpenAPI-spec import test (docs/web-ui.md, Structure).
  *
  * Playground-owned (listed in .playground-files). Scans every .ts/.tsx/.js/.jsx/.mjs file under `web/src`, `web/e2e`
  * and `web/test` (this file excluded) for an import, dynamic import or require of any `openapi.json`, and fails unless
@@ -101,12 +101,12 @@ export function legacySpecProblem(webRoot: string): string | null {
   );
 }
 
-describe("the OpenAPI spec is imported from src/api/openapi.json (WEB-20)", () => {
+describe("the OpenAPI spec is imported from src/api/openapi.json (spec-import convention)", () => {
   it("imports no openapi.json except src/api/openapi.json", () => {
     const hits = findSpecViolations(WEB_ROOT, SELF);
     expect(
       hits.map((h) => describeViolation(WEB_ROOT, h)),
-      "WEB-20",
+      "spec-import convention",
     ).toEqual([]);
   });
 

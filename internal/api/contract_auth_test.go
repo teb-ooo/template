@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces API-14 and API-15. The test builds the API with the same constructor the server and TestParity use, reads
+// Enforces the auth convention (docs/go-api.md, Users and permissions). The test builds the API with the same constructor the server and TestParity use, reads
 // its OpenAPI document and, for every operation:
 //   - Security non-empty: a request with no cookie and no bearer token MUST answer 401 (the handler calls
 //     auth.Require(ctx) first, before touching anything else);
@@ -228,13 +228,13 @@ func TestContractAuth(t *testing.T) {
 	for _, o := range ops {
 		secured := len(o.op.Security) > 0
 		if !secured && !o.ext("x-public") {
-			t.Errorf("API-14 %s declares no Security and is not marked x-public; declare Security and call auth.Require first, or set Extensions x-public: true; %s", o.name(), contractSeeDocs)
+			t.Errorf("auth convention (docs/go-api.md, Users and permissions): %s declares no Security and is not marked x-public; declare Security and call auth.Require first, or set Extensions x-public: true; %s", o.name(), contractSeeDocs)
 		}
 		if secured {
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, contractRequest(o))
 			if rec.Code != http.StatusUnauthorized {
-				t.Errorf("API-14 %s answered %d without credentials, want 401: call auth.Require(ctx) first in the handler; %s", o.name(), rec.Code, contractSeeDocs)
+				t.Errorf("auth convention (docs/go-api.md, Users and permissions): %s answered %d without credentials, want 401: call auth.Require(ctx) first in the handler; %s", o.name(), rec.Code, contractSeeDocs)
 			}
 		}
 		if o.ext("x-admin") {
@@ -243,7 +243,7 @@ func TestContractAuth(t *testing.T) {
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, req)
 			if rec.Code != http.StatusForbidden {
-				t.Errorf("API-15 %s (x-admin) answered %d to a signed-in non-admin, want 403: use auth.RequireAdmin(ctx); %s", o.name(), rec.Code, contractSeeDocs)
+				t.Errorf("auth convention (docs/go-api.md, Users and permissions): %s (x-admin) answered %d to a signed-in non-admin, want 403: use auth.RequireAdmin(ctx); %s", o.name(), rec.Code, contractSeeDocs)
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces API-27: SQL lives in internal/db/queries/*.sql compiled by sqlc, with no SQL strings in handlers. The test
+// Enforces the SQL convention (docs/go-api.md, Database access): SQL lives in internal/db/queries/*.sql compiled by sqlc, with no SQL strings in handlers. The test
 // parses every non-test, non-generated .go file of the module outside internal/db (go/parser) and fails on a string
 // literal that is a SQL statement: it starts, after white space, with SELECT ... FROM, INSERT INTO, UPDATE ... SET,
 // DELETE FROM, WITH x AS (, or CREATE/ALTER/DROP followed by TABLE, INDEX, VIEW, FUNCTION, TRIGGER, EXTENSION, TYPE,
@@ -86,14 +86,14 @@ func findSQLLiterals(files []scanFile) []string {
 			if ok, problem := escaped(marks, "allow-sql", line); ok {
 				return true
 			} else if problem != "" {
-				out = append(out, fmt.Sprintf("%s:%d: rule API-27: %s; %s", f.rel, line, problem, sqlDoc))
+				out = append(out, fmt.Sprintf("%s:%d: SQL convention (docs/go-api.md, Database access): %s; %s", f.rel, line, problem, sqlDoc))
 				return true
 			}
 			snippet := strings.Join(strings.Fields(s), " ")
 			if len(snippet) > 50 {
 				snippet = snippet[:50] + "..."
 			}
-			out = append(out, fmt.Sprintf("%s:%d: rule API-27: this string literal is a SQL statement (%q); SQL belongs in internal/db/queries/*.sql compiled by sqlc, not in handlers. To fix: move it to a named query in internal/db/queries/, run `sqlc generate` and call the generated method; if it only looks like SQL, add `// playground:allow-sql <reason>` on that line or the line above; %s",
+			out = append(out, fmt.Sprintf("%s:%d: SQL convention (docs/go-api.md, Database access): this string literal is a SQL statement (%q); SQL belongs in internal/db/queries/*.sql compiled by sqlc, not in handlers. To fix: move it to a named query in internal/db/queries/, run `sqlc generate` and call the generated method; if it only looks like SQL, add `// playground:allow-sql <reason>` on that line or the line above; %s",
 				f.rel, line, snippet, sqlDoc))
 			return true
 		})
@@ -146,7 +146,7 @@ func TestNoSQLInGoCodeFixtures(t *testing.T) {
 			`"ALTER TABLE items ADD COLUMN x int"`, `"DROP TABLE items"`, `"-- name\nSELECT * FROM t"`,
 		} {
 			got := run(map[string]string{"internal/api/x.go": lit(s)})
-			if len(got) != 1 || !strings.HasPrefix(got[0], "internal/api/x.go:2: rule API-27") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
+			if len(got) != 1 || !strings.HasPrefix(got[0], "internal/api/x.go:2: SQL convention") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
 				t.Errorf("%s: got %v", s, got)
 			}
 		}

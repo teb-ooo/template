@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces the checkable part of API-11: a handler registered through Huma (huma.Register, huma.Get, huma.Post, ...)
+// Enforces the checkable part of the Huma error convention (docs/go-api.md, Errors): a handler registered through Huma (huma.Register, huma.Get, huma.Post, ...)
 // returns errors as `huma.Error*` problem+json and writes no other wire shape. The test parses every non-test, non-generated
 // .go file under internal/ (go/parser), finds the handler of each Huma registration (a function literal, a function or a
 // method named in the call, also inside a wrapper call) and fails on these calls inside it:
@@ -179,16 +179,16 @@ func findRawResponses(files []scanFile) []string {
 			if ok, problem := escaped(marks, "allow-raw-response", line); ok {
 				continue
 			} else if problem != "" {
-				out = append(out, fmt.Sprintf("%s:%d: rule API-11: %s; %s", f.rel, line, problem, errorsDoc))
+				out = append(out, fmt.Sprintf("%s:%d: Huma error convention (docs/go-api.md, Errors): %s; %s", f.rel, line, problem, errorsDoc))
 				continue
 			}
 			if ok, problem := escaped(marks, "allow-raw-response", fnPos); ok { // above the function
 				continue
 			} else if problem != "" {
-				out = append(out, fmt.Sprintf("%s:%d: rule API-11: %s; %s", f.rel, fnPos, problem, errorsDoc))
+				out = append(out, fmt.Sprintf("%s:%d: Huma error convention (docs/go-api.md, Errors): %s; %s", f.rel, fnPos, problem, errorsDoc))
 				continue
 			}
-			out = append(out, fmt.Sprintf("%s:%d: rule API-11: handler %s (registered with huma) writes a raw response with %s; handlers return huma.Error* problem+json errors and no other wire shape. To fix: return huma.Error404NotFound(...), huma.Error400BadRequest(...) or the matching huma.Error* from the handler; if this route must answer another shape, add `// playground:allow-raw-response <reason>` on that line, the line above, or above the function; %s",
+			out = append(out, fmt.Sprintf("%s:%d: Huma error convention (docs/go-api.md, Errors): handler %s (registered with huma) writes a raw response with %s; handlers return huma.Error* problem+json errors and no other wire shape. To fix: return huma.Error404NotFound(...), huma.Error400BadRequest(...) or the matching huma.Error* from the handler; if this route must answer another shape, add `// playground:allow-raw-response <reason>` on that line, the line above, or above the function; %s",
 				f.rel, line, handler, forms[i], errorsDoc))
 		}
 	}
@@ -280,7 +280,7 @@ func wrap(f any) any { return f }
 			t.Fatalf("got %d: %v", len(got), got)
 		}
 		for _, g := range got {
-			if !strings.Contains(g, "rule API-11") || !strings.Contains(g, "huma.Error") || !strings.HasSuffix(g, "see docs/go-api.md") || !strings.HasPrefix(g, "internal/api/a.go:") {
+			if !strings.Contains(g, "Huma error convention") || !strings.Contains(g, "huma.Error") || !strings.HasSuffix(g, "see docs/go-api.md") || !strings.HasPrefix(g, "internal/api/a.go:") {
 				t.Errorf("message: %s", g)
 			}
 		}

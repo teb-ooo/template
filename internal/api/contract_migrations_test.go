@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces the checkable part of DAT-1: every file in migrations/ (embed.go aside) is named NNNNN_snake_case.sql with a
+// Enforces the checkable part of the migration convention (docs/data-and-secrets.md, Migrations): every file in migrations/ (embed.go aside) is named NNNNN_snake_case.sql with a
 // five-digit number, the numbers run 00001, 00002, ... strictly increasing with no gap and no duplicate, and each file
 // contains a `-- +goose Up` line and a later `-- +goose Down` line. That each migration holds one concern is a judgement
 // the test cannot make: keep one concern per file yourself.
@@ -48,7 +48,7 @@ func findMigrationProblems(root string) []string {
 			continue
 		}
 		if e.IsDir() || !migrationName.MatchString(name) {
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: the name must match NNNNN_snake_case.sql (five digits, lower-case words, for example 00003_add_mood.sql). To fix: rename it (or remove it if it is not a migration); %s", name, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): the name must match NNNNN_snake_case.sql (five digits, lower-case words, for example 00003_add_mood.sql). To fix: rename it (or remove it if it is not a migration); %s", name, migrationsDoc))
 			continue
 		}
 		n, _ := strconv.Atoi(migrationName.FindStringSubmatch(name)[1])
@@ -61,11 +61,11 @@ func findMigrationProblems(root string) []string {
 		up, down := gooseUp.FindIndex(body), gooseDown.FindIndex(body)
 		switch {
 		case up == nil:
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: no `-- +goose Up` line. To fix: start the file with `-- +goose Up` and put the schema change under it; %s", name, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): no `-- +goose Up` line. To fix: start the file with `-- +goose Up` and put the schema change under it; %s", name, migrationsDoc))
 		case down == nil:
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: no `-- +goose Down` line. To fix: add `-- +goose Down` after the Up section with the statements that undo it; %s", name, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): no `-- +goose Down` line. To fix: add `-- +goose Down` after the Up section with the statements that undo it; %s", name, migrationsDoc))
 		case down[0] < up[0]:
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: `-- +goose Down` comes before `-- +goose Up`. To fix: put the Up section first; %s", name, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): `-- +goose Down` comes before `-- +goose Up`. To fix: put the Up section first; %s", name, migrationsDoc))
 		}
 	}
 	sort.Slice(seq, func(i, j int) bool {
@@ -78,9 +78,9 @@ func findMigrationProblems(root string) []string {
 	for i, s := range seq {
 		switch {
 		case i > 0 && s.n == seq[i-1].n:
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: number %05d is used twice (also %s). To fix: give the newer migration the next free number; %s", s.name, s.n, seq[i-1].name, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): number %05d is used twice (also %s). To fix: give the newer migration the next free number; %s", s.name, s.n, seq[i-1].name, migrationsDoc))
 		case s.n != want:
-			out = append(out, fmt.Sprintf("migrations/%s:1: rule DAT-1: expected number %05d here, found %05d: numbers run 00001, 00002, ... without a gap. To fix: renumber it if it was never promoted, otherwise add the missing migration; %s", s.name, want, s.n, migrationsDoc))
+			out = append(out, fmt.Sprintf("migrations/%s:1: migration convention (docs/data-and-secrets.md, Migrations): expected number %05d here, found %05d: numbers run 00001, 00002, ... without a gap. To fix: renumber it if it was never promoted, otherwise add the missing migration; %s", s.name, want, s.n, migrationsDoc))
 			want = s.n + 1
 		default:
 			want++
@@ -117,7 +117,7 @@ func TestMigrationChecker(t *testing.T) {
 	t.Run("rejects a bad name", func(t *testing.T) {
 		for _, n := range []string{"1_init.sql", "00001-init.sql", "00001_Init.sql", "00001_init.sql.bak", "README.md", "0001_init.sql"} {
 			got := run(map[string]string{n: good})
-			if len(got) == 0 || !strings.Contains(got[0], "migrations/"+n+":1: rule DAT-1: the name must match") || !strings.HasSuffix(got[0], "see docs/data-and-secrets.md and docs/go-api.md") {
+			if len(got) == 0 || !strings.Contains(got[0], "migrations/"+n+":1: migration convention (docs/data-and-secrets.md, Migrations): the name must match") || !strings.HasSuffix(got[0], "see docs/data-and-secrets.md and docs/go-api.md") {
 				t.Errorf("%s: got %v", n, got)
 			}
 		}

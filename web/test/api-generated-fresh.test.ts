@@ -1,5 +1,5 @@
 /**
- * The playground's generated-API freshness test (rule WEB-18).
+ * The playground's generated-API freshness test (docs/web-ui.md, Structure).
  *
  * Playground-owned (listed in .playground-files). Runs the repo's own `node_modules/.bin/openapi-typescript` on
  * `src/api/openapi.json` into a temp file (no network) and requires it to equal the committed `src/api/schema.d.ts`
@@ -57,7 +57,7 @@ function runBin(spec: string, out: string): void {
   execFileSync(bin, [spec, "-o", out], { cwd: WEB_ROOT, stdio: "pipe" });
 }
 
-describe("src/api/schema.d.ts is fresh (WEB-18)", () => {
+describe("src/api/schema.d.ts is fresh (generated-API convention)", () => {
   if (!existsSync(bin) && !required) {
     it.skip("skipped: node_modules/.bin/openapi-typescript is missing (run npm ci); CI=1 or PLAYGROUND_REQUIRE_DB makes this a failure", () => {});
     return;
@@ -66,7 +66,7 @@ describe("src/api/schema.d.ts is fresh (WEB-18)", () => {
     expect(existsSync(bin), "node_modules/.bin/openapi-typescript is missing; run `npm ci`; see docs/web-ui.md").toBe(
       true,
     );
-    expect(schemaProblem(WEB_ROOT, runBin), "WEB-18").toBe("");
+    expect(schemaProblem(WEB_ROOT, runBin), "generated-API convention").toBe("");
   });
 });
 

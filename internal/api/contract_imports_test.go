@@ -1,11 +1,11 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
 // Enforces the import bans of three rules by parsing every non-test, non-generated .go file of the module (go/parser):
-//   - CNV-19, email only through the playground-go `mail` package: no net/smtp and no mail provider SDK (resend, sendgrid,
+//   - email convention (docs/building-an-app.md, Email templates), email only through the playground-go `mail` package: no net/smtp and no mail provider SDK (resend, sendgrid,
 //     mailgun, SES, postmark, gomail, go-mail, mailjet and similar). net/mail is allowed: it parses addresses and cannot send.
-//   - CNV-25, no own passwords, passkeys or token signing: no bcrypt, argon2, scrypt or pbkdf2, no JWT, JOSE, PASETO,
+//   - sign-in convention (docs/login-for-apps.md, The pieces), no own passwords, passkeys or token signing: no bcrypt, argon2, scrypt or pbkdf2, no JWT, JOSE, PASETO,
 //     WebAuthn or OAuth/OIDC client library. crypto/hmac and crypto/sha256 stay allowed (legitimate for webhooks and hashing).
-//   - API-37, the assistant is built on the playground-go `assistant` package at /assistant: no direct LLM SDK (Anthropic,
+//   - assistant convention (docs/platform-overview.md, The end-user assistant), the assistant is built on the playground-go `assistant` package at /assistant: no direct LLM SDK (Anthropic,
 //     OpenAI, Gemini, Mistral, Cohere, langchaingo, ollama) in a file that does not also import playground-go/assistant, and no
 //     registered route path containing "assistant" other than /assistant (and /api/assistant, which the package mounts).
 //     Only the negative half is checkable: that an assistant IS built on the package is not.
@@ -25,10 +25,16 @@ import (
 	"testing"
 )
 
+const (
+	ruleEmail     = "email convention (docs/building-an-app.md, Email templates)"
+	ruleSignIn    = "sign-in convention (docs/login-for-apps.md, The pieces)"
+	ruleAssistant = "assistant convention (docs/platform-overview.md, The end-user assistant)"
+)
+
 const importsDoc = "see docs/go-api.md"
 
 type importBan struct {
-	rule string // CNV-19
+	rule string // email convention (docs/building-an-app.md, Email templates)
 	re   *regexp.Regexp
 	what string // what the rule says
 	fix  string
@@ -37,11 +43,11 @@ type importBan struct {
 func banRE(s string) *regexp.Regexp { return regexp.MustCompile(s) }
 
 var importBans = []importBan{
-	{"CNV-19", banRE(`^net/smtp$|^github\.com/jordan-wright/email$|^github\.com/aws/aws-sdk-go(-v2)?/service/ses(v2)?(/|$)|^github\.com/aws/aws-sdk-go/service/ses|(^|/)(resend|sendgrid|mailgun|postmark|mailjet|gomail|go-mail|go-simple-mail|sparkpost|mandrill|mailersend|brevo|sendinblue)([-_.]|/|$|v?\d)`),
+	{ruleEmail, banRE(`^net/smtp$|^github\.com/jordan-wright/email$|^github\.com/aws/aws-sdk-go(-v2)?/service/ses(v2)?(/|$)|^github\.com/aws/aws-sdk-go/service/ses|(^|/)(resend|sendgrid|mailgun|postmark|mailjet|gomail|go-mail|go-simple-mail|sparkpost|mandrill|mailersend|brevo|sendinblue)([-_.]|/|$|v?\d)`),
 		"apps send email only through the playground-go mail package", "send with playground-go/mail (mail.Mailer.Send; internal/mail holds the templates)"},
-	{"CNV-25", banRE(`^golang\.org/x/crypto/(bcrypt|argon2|scrypt|pbkdf2)(/|$)|argon2id|^github\.com/golang-jwt/|^github\.com/dgrijalva/jwt-go|^github\.com/form3tech-oss/jwt-go|^github\.com/lestrrat-go/jwx|(^|/)go-jose(/|\.|$)|^github\.com/square/go-jose|^gopkg\.in/square/go-jose|^github\.com/cristalhq/jwt|^github\.com/pascaldekloe/jwt|paseto|^github\.com/go-webauthn/|^github\.com/duo-labs/webauthn|^github\.com/fxamacker/webauthn|^golang\.org/x/oauth2(/|$)|^github\.com/coreos/go-oidc|^github\.com/markbates/goth|^github\.com/ory/fosite`),
+	{ruleSignIn, banRE(`^golang\.org/x/crypto/(bcrypt|argon2|scrypt|pbkdf2)(/|$)|argon2id|^github\.com/golang-jwt/|^github\.com/dgrijalva/jwt-go|^github\.com/form3tech-oss/jwt-go|^github\.com/lestrrat-go/jwx|(^|/)go-jose(/|\.|$)|^github\.com/square/go-jose|^gopkg\.in/square/go-jose|^github\.com/cristalhq/jwt|^github\.com/pascaldekloe/jwt|paseto|^github\.com/go-webauthn/|^github\.com/duo-labs/webauthn|^github\.com/fxamacker/webauthn|^golang\.org/x/oauth2(/|$)|^github\.com/coreos/go-oidc|^github\.com/markbates/goth|^github\.com/ory/fosite`),
 		"apps do not build passwords, passkeys or token signing", "sign users in through the playground-go auth package and the `id` app (auth.Require, auth.RequireAdmin)"},
-	{"API-37", banRE(`^github\.com/anthropics/anthropic-sdk-go|^github\.com/liushuangls/go-anthropic|^github\.com/sashabaranov/go-openai|^github\.com/openai/openai-go|^github\.com/google/generative-ai-go|^google\.golang\.org/genai|^github\.com/tmc/langchaingo|^github\.com/ollama/ollama|^github\.com/cohere-ai/|^github\.com/mistralai/|^github\.com/gage-technologies/mistral-go|^github\.com/anush008/|^github\.com/pkoukk/tiktoken-go`),
+	{ruleAssistant, banRE(`^github\.com/anthropics/anthropic-sdk-go|^github\.com/liushuangls/go-anthropic|^github\.com/sashabaranov/go-openai|^github\.com/openai/openai-go|^github\.com/google/generative-ai-go|^google\.golang\.org/genai|^github\.com/tmc/langchaingo|^github\.com/ollama/ollama|^github\.com/cohere-ai/|^github\.com/mistralai/|^github\.com/gage-technologies/mistral-go|^github\.com/anush008/|^github\.com/pkoukk/tiktoken-go`),
 		"an app's assistant is built on the playground-go assistant package, not on an LLM SDK", "build the assistant with assistant.New from playground-go/assistant (the template's assistant overlay does it)"},
 }
 
@@ -121,14 +127,14 @@ func findImportViolations(files []scanFile) []string {
 				if !b.re.MatchString(p) {
 					continue
 				}
-				if b.rule == "API-37" && hasAssistant {
+				if b.rule == ruleAssistant && hasAssistant {
 					continue
 				}
 				extra := ""
-				if b.rule == "API-37" {
+				if b.rule == ruleAssistant {
 					extra = " (a file that also imports playground-go/assistant is not flagged)"
 				}
-				out = append(out, fmt.Sprintf("%s:%d: rule %s: %s, and this file imports %q%s. To fix: %s; %s",
+				out = append(out, fmt.Sprintf("%s:%d: %s: %s, and this file imports %q%s. To fix: %s; %s",
 					f.rel, imports[p], b.rule, b.what, p, extra, b.fix, importsDoc))
 			}
 		}
@@ -140,7 +146,7 @@ func findImportViolations(files []scanFile) []string {
 		sort.Strings(rs)
 		for _, p := range rs {
 			if isAssistantPath(p) && !allowedAssistantRoute.MatchString(p) {
-				out = append(out, fmt.Sprintf("%s:%d: rule API-37: the assistant lives at /assistant (its API under /api/assistant), and this file registers the route %q. To fix: drop the route and mount the playground-go assistant package instead (assistant.New); %s",
+				out = append(out, fmt.Sprintf("%s:%d: "+ruleAssistant+": the assistant lives at /assistant (its API under /api/assistant), and this file registers the route %q. To fix: drop the route and mount the playground-go assistant package instead (assistant.New); %s",
 					f.rel, routes[p], p, importsDoc))
 			}
 		}
@@ -187,7 +193,7 @@ func TestSourceImportBansFixtures(t *testing.T) {
 		for _, p := range []string{"net/smtp", "github.com/resend/resend-go/v2", "github.com/sendgrid/sendgrid-go", "github.com/mailgun/mailgun-go/v4",
 			"github.com/aws/aws-sdk-go-v2/service/sesv2", "github.com/keighl/postmark", "gopkg.in/gomail.v2", "github.com/wneessen/go-mail", "github.com/mailjet/mailjet-apiv3-go/v4"} {
 			got := check(p, imp(p))
-			if len(got) != 1 || !strings.Contains(got[0], "rule CNV-19") || !strings.Contains(got[0], "internal/api/x.go:3") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
+			if len(got) != 1 || !strings.Contains(got[0], "email convention") || !strings.Contains(got[0], "internal/api/x.go:3") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
 				t.Errorf("%s: got %v", p, got)
 			}
 		}
@@ -196,7 +202,7 @@ func TestSourceImportBansFixtures(t *testing.T) {
 		for _, p := range []string{"golang.org/x/crypto/bcrypt", "golang.org/x/crypto/argon2", "golang.org/x/crypto/scrypt", "github.com/golang-jwt/jwt/v5",
 			"github.com/go-webauthn/webauthn/webauthn", "github.com/go-jose/go-jose/v4", "github.com/lestrrat-go/jwx/v2", "golang.org/x/oauth2"} {
 			got := check(p, imp(p))
-			if len(got) != 1 || !strings.Contains(got[0], "rule CNV-25") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
+			if len(got) != 1 || !strings.Contains(got[0], "sign-in convention") || !strings.HasSuffix(got[0], "see docs/go-api.md") {
 				t.Errorf("%s: got %v", p, got)
 			}
 		}
@@ -204,7 +210,7 @@ func TestSourceImportBansFixtures(t *testing.T) {
 	t.Run("rejects an LLM SDK unless the file imports the assistant package", func(t *testing.T) {
 		for _, p := range []string{"github.com/anthropics/anthropic-sdk-go", "github.com/anthropics/anthropic-sdk-go/option", "github.com/openai/openai-go", "github.com/sashabaranov/go-openai"} {
 			got := check(p, imp(p))
-			if len(got) != 1 || !strings.Contains(got[0], "rule API-37") {
+			if len(got) != 1 || !strings.Contains(got[0], "assistant convention") {
 				t.Errorf("%s: got %v", p, got)
 			}
 		}
@@ -223,7 +229,7 @@ func TestSourceImportBansFixtures(t *testing.T) {
 		}
 		for _, bad := range []string{"/api/v1/assistant", "/chat-assistant", "/api/assistants", "/Assistant-bot"} {
 			got := check(bad, src(bad))
-			if len(got) != 1 || !strings.Contains(got[0], "rule API-37") || !strings.Contains(got[0], "x.go:5") {
+			if len(got) != 1 || !strings.Contains(got[0], "assistant convention") || !strings.Contains(got[0], "x.go:5") {
 				t.Errorf("%s: got %v", bad, got)
 			}
 		}

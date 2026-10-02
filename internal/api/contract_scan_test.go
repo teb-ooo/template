@@ -1,6 +1,6 @@
 // Shared scanner for the playground-owned source contract tests (listed in .playground-files; do not edit in an app):
-// contract_imports_test.go (CNV-19, CNV-25, API-37), contract_sql_test.go (API-27), contract_errors_test.go (API-11)
-// and contract_migrations_test.go (DAT-1).
+// contract_imports_test.go (email, sign-in and assistant conventions), contract_sql_test.go (SQL convention), contract_errors_test.go (Huma error
+// convention) and contract_migrations_test.go (migration convention).
 //
 // It parses Go files with go/parser. Test files (*_test.go), generated files (a "Code generated ... DO NOT EDIT."
 // header), hidden, vendor, node_modules, testdata and web directories are never scanned. An escape is a marker comment

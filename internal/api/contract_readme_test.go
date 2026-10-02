@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces rule CNV-13 as far as a check can: the repository has a README.md that opens with a title, says what the app is,
+// Enforces the README convention (docs/conventions.md, Repositories and commits) as far as a check can: the repository has a README.md that opens with a title, says what the app is,
 // and names the command that runs its tests. That it is short and clear stays with the agent.
 //
 // To fix a failure: write README.md at the repository root: `# name`, then a few sentences saying what the app is and how to
@@ -44,7 +44,7 @@ func readmeProblems(root string) []string {
 
 func TestReadmeNamesTheAppAndItsTestCommand(t *testing.T) {
 	if got := readmeProblems(contractModuleRoot(t)); len(got) > 0 {
-		t.Fatalf("CNV-13: %s (see docs/conventions.md)", strings.Join(got, "; "))
+		t.Fatalf("README convention (docs/conventions.md, Repositories and commits): %s (see docs/conventions.md)", strings.Join(got, "; "))
 	}
 }
 

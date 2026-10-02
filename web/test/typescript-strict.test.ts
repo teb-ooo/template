@@ -1,5 +1,5 @@
 /**
- * The playground's TypeScript strictness test (rule WEB-24: strict, `verbatimModuleSyntax`, no `any`).
+ * The playground's TypeScript strictness test (docs/web-ui.md, Structure: strict, `verbatimModuleSyntax`, no `any`).
  *
  * Playground-owned (listed in .playground-files). It asserts three things:
  *  1. the effective compilerOptions of the app's tsconfig files (tsconfig.json and every file it references, with
@@ -203,7 +203,7 @@ export function findScriptProblem(webRoot: string): string | null {
   return scripts.typecheck ? null : `web/package.json has no "typecheck" script (tsc --noEmit); ${DOC}`;
 }
 
-describe("TypeScript strictness (WEB-24)", () => {
+describe("TypeScript strictness (TypeScript strictness convention)", () => {
   it("tsconfig is strict with verbatimModuleSyntax", () => {
     expect(findConfigProblems(WEB_ROOT), findConfigProblems(WEB_ROOT).join("\n")).toEqual([]);
   });

@@ -1,5 +1,5 @@
 /**
- * The playground's client-state test (rule WEB-16: server state lives in TanStack Query and nowhere else, client-only state
+ * The playground's client-state test (docs/web-ui.md, Structure: server state lives in TanStack Query and nowhere else, client-only state
  * stays local to a component, no global store).
  *
  * Playground-owned (listed in .playground-files). It fails on
@@ -9,7 +9,7 @@
  *  - an import, export-from, dynamic import or require of one of them (or a subpath such as `zustand/middleware`) in a
  *    .ts/.tsx/.js/.jsx/.mjs file under `web/src`, found through the TypeScript parser, so comments and strings never match.
  * React context is allowed. Generated files are skipped (`schema.d.ts`, `routeTree.gen.ts`, `.d.ts` under `src/api/`, files
- * that say "generated" or "DO NOT EDIT" at the top). There is no escape. Raw `fetch` is WEB-17's business (no-raw-fetch.test.ts).
+ * that say "generated" or "DO NOT EDIT" at the top). There is no escape. Raw `fetch` is the server-call convention's business (no-raw-fetch.test.ts).
  * That server state is not hidden in a module variable or a context is a judgement the test cannot make.
  *
  * To fix a failure: remove the library; read server data with the generated hooks (`api.useQuery("get", "/api/items")`),
@@ -156,13 +156,13 @@ export function findBannedImports(webRoot: string): Problem[] {
 export function describeProblem(p: Problem): string {
   const where = p.file === "package.json" ? `web/package.json:${p.line}` : `web/${p.file}:${p.line}`;
   return (
-    `${where}: rule WEB-16: ${p.how}, ${BANNED[p.lib]}. ` +
+    `${where}: client-state convention (docs/web-ui.md, Structure): ${p.how}, ${BANNED[p.lib]}. ` +
     `Server state lives in TanStack Query (the generated hooks, api.useQuery("get", "/api/...")) and client-only state stays local to a component ` +
     `(useState, useReducer, a small React context). To fix: remove ${p.lib} (npm uninstall ${p.lib}) and use those; ${DOC}`
   );
 }
 
-describe("no state library or second HTTP client (WEB-16)", () => {
+describe("no state library or second HTTP client (client-state convention)", () => {
   it("package.json lists none", () => {
     const hits = findBannedDeps(WEB_ROOT).map(describeProblem);
     expect(hits, hits.join("\n")).toEqual([]);
@@ -220,7 +220,7 @@ describe("the state-library checker", () => {
     ]);
     expect(hits.find((h) => h.lib === "zustand")?.line).toBe(3);
     const msg = describeProblem(hits.find((h) => h.lib === "zustand")!);
-    expect(msg).toContain("web/package.json:3: rule WEB-16");
+    expect(msg).toContain("web/package.json:3: client-state convention");
     expect(msg).toContain("TanStack Query");
     expect(msg.endsWith("see docs/web-ui.md")).toBe(true);
   });
@@ -246,7 +246,7 @@ describe("the state-library checker", () => {
       "src/e.js:1:axios",
     ]);
     const msg = describeProblem(hits[0]!);
-    expect(msg).toContain('web/src/a.ts:1: rule WEB-16: imports "zustand"');
+    expect(msg).toContain('web/src/a.ts:1: client-state convention (docs/web-ui.md, Structure): imports "zustand"');
     expect(msg.endsWith("see docs/web-ui.md")).toBe(true);
   });
 

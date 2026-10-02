@@ -1,5 +1,5 @@
 /**
- * The playground's server-call test (rule WEB-17: server calls go only through the hooks @teb-ooo/web builds from
+ * The playground's server-call test (server calls go only through the hooks @teb-ooo/web builds from
  * `src/api/schema.d.ts`, never through fetch).
  *
  * Playground-owned (listed in .playground-files). Through the TypeScript parser it fails on a call of `fetch(...)`
@@ -131,16 +131,16 @@ export function findRawCalls(webRoot: string): RawCall[] {
 
 export function describeRawCall(c: RawCall): string {
   if (c.marker === "no-reason") {
-    return `web/${c.file}:${c.line}: rule WEB-17: the marker \`// ${MARKER}\` has no reason. Write \`// ${MARKER} <why this call cannot be a generated hook>\`; ${DOC}`;
+    return `web/${c.file}:${c.line}: server-call convention (docs/web-ui.md, Structure): the marker \`// ${MARKER}\` has no reason. Write \`// ${MARKER} <why this call cannot be a generated hook>\`; ${DOC}`;
   }
   return (
-    `web/${c.file}:${c.line}: rule WEB-17: ${c.what} is a raw server call; server calls go only through the hooks @teb-ooo/web builds from src/api/schema.d.ts. ` +
+    `web/${c.file}:${c.line}: server-call convention (docs/web-ui.md, Structure): ${c.what} is a raw server call; server calls go only through the hooks @teb-ooo/web builds from src/api/schema.d.ts. ` +
     `To fix: add the operation to the Go API, run \`npm run gen:api\` and use api.useQuery("get", "/api/...") or api.useMutation(...); ` +
     `if the route cannot be in the OpenAPI spec, put \`// ${MARKER} <reason>\` on that line or the line above; ${DOC}`
   );
 }
 
-describe("server calls go through the generated hooks (WEB-17)", () => {
+describe("server calls go through the generated hooks (server-call convention)", () => {
   it("web/src makes no raw fetch, XMLHttpRequest or axios call", () => {
     const hits = findRawCalls(WEB_ROOT).map(describeRawCall);
     expect(hits, hits.join("\n")).toEqual([]);
@@ -191,7 +191,7 @@ describe("the raw-call checker", () => {
       "src/d.ts:3:axios call",
     ]);
     const msg = describeRawCall(hits[0]!);
-    expect(msg).toContain("web/src/a.ts:1: rule WEB-17");
+    expect(msg).toContain("web/src/a.ts:1: server-call convention");
     expect(msg).toContain("npm run gen:api");
     expect(msg).toContain("playground:allow-fetch <reason>");
     expect(msg.endsWith("see docs/web-ui.md")).toBe(true);

@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces WEB-18: web/src/api/openapi.json must be what `npm run gen:api` would write from the code now. The test
+// Enforces the generated-API convention (docs/web-ui.md, Structure): web/src/api/openapi.json must be what `npm run gen:api` would write from the code now. The test
 // builds the spec by running `go run ./cmd/server --print-openapi` (the very code path gen:api uses, so the bytes are
 // identical; it needs no database or platform environment) and compares it with the committed file. On a difference it
 // names the first differing path and operation. To fix a failure run `npm run gen:api` in web/ and commit
@@ -160,7 +160,7 @@ func TestOpenAPISpecFresh(t *testing.T) {
 		t.Fatal(specFreshProblem(specPath, nil))
 	}
 	if p := specFreshProblem(specPath, builtSpec(t, root, specPath)); p != "" {
-		t.Fatal("WEB-18: " + p)
+		t.Fatal("generated-API convention (docs/web-ui.md, Structure): " + p)
 	}
 }
 
