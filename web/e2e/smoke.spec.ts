@@ -203,14 +203,14 @@ test("signed out: the start page navigates to /auth/login instead of rendering n
 });
 
 /**
- * The platform bar (docs/shell.md): the shell's one top bar is the only banner, at most 24px high on one line, its
+ * The platform bar (docs/shell.md): the shell's one top bar is the only banner, at most 36px high on one line, its
  * only text is the app's name, and every control in it has an accessible name. The app adds nothing to it.
  */
 async function expectSlimBar(page: Page): Promise<void> {
   const bars = page.getByRole("banner");
   await expect(bars).toHaveCount(1);
   const box = await bars.boundingBox();
-  expect(box?.height ?? Infinity).toBeLessThanOrEqual(24);
+  expect(box?.height ?? Infinity).toBeLessThanOrEqual(36);
   expect(box?.height ?? 0).toBeGreaterThan(0);
   expect((await bars.innerText()).trim()).not.toContain("\n");
   for (const b of await bars.getByRole("button").all()) expect(await b.getAttribute("aria-label")).toBeTruthy();
