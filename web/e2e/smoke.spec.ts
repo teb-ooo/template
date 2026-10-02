@@ -264,12 +264,13 @@ test("GET /api/live signed out answers 401 problem+json", async ({ request }) =>
 test.describe("live stream", () => {
   test.skip(!sessionCookie, "SESSION_COOKIE is not set: the stream needs a signed-in person");
 
-  test("the page turns the stream on with ?live=1 and the indicator reports live", async ({ page }) => {
+  test("the page turns the stream on with ?live=1 and the bar shows no warning dot", async ({ page }) => {
+    // Since ui 0.30 the bar draws the dot only while the stream is reconnecting or degraded.
+    const live = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/live" && r.status() === 200);
     await page.goto("/?live=1");
-    await expect(page.getByRole("status", { name: "Live" })).toBeVisible();
-    // No console errors from the stream, and it stays up (a failure would flip the dot to Reconnecting).
+    await live;
     await page.waitForTimeout(500);
-    await expect(page.getByRole("status", { name: "Live" })).toBeVisible();
+    await expect(page.getByRole("status", { name: /reconnecting|degraded/i })).toHaveCount(0);
   });
 
   test("the stream's first frame is a comment, with the event-stream headers", async ({ page }) => {

@@ -56,15 +56,16 @@ describe("root route", () => {
     fireEvent.keyDown(box, { key: "Escape" });
   });
 
-  it("shows the live dot in the bar: not live while the stream is off", async () => {
+  // Since ui 0.30 the bar draws the live dot only when the stream is reconnecting or degraded: an off or healthy stream shows
+  // nothing.
+  it("draws no live dot while the stream is off", async () => {
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
     await screen.findByRole("heading", { name: "Home" });
-    const dot = screen.getByRole("status", { name: "Not live" });
-    expect(screen.getByRole("banner").contains(dot)).toBe(true);
+    expect(screen.queryByRole("status", { name: /live/i })).toBeNull();
   });
 
-  it("reports live once /api/live answers with an event stream", async () => {
+  it("draws no live dot while /api/live is healthy", async () => {
     window.history.replaceState(null, "", "/?live=1");
     server.use(
       http.get("*/api/live", () => {
@@ -74,7 +75,8 @@ describe("root route", () => {
     );
     setPlayground({ app_name: "sample", env: "staging" });
     renderApp("/");
-    expect(await screen.findByRole("status", { name: "Live" })).toBeTruthy();
+    await screen.findByRole("heading", { name: "Home" });
+    expect(screen.queryByRole("status", { name: /live/i })).toBeNull();
   });
 
   // The feedback tool belongs to the shell: "Send feedback" is in Cmd+K (and an icon in the bar) only for the superadmin or
