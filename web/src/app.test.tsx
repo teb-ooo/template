@@ -12,7 +12,11 @@ afterEach(cleanup);
 beforeEach(() => window.history.replaceState(null, "", "/?live=0"));
 window.scrollTo = () => undefined; // jsdom does not implement it; the router calls it on navigation
 
-const server = setupMswServer(http.get("*/auth/me", () => HttpResponse.json(user)));
+const server = setupMswServer(
+  http.get("*/auth/me", () => HttpResponse.json(user)),
+  // the bar polls the agent status route of the platform edge (owner only); it does not exist under test
+  http.get("*/_playground/agent", () => new HttpResponse(null, { status: 404 })),
+);
 
 function renderApp(path: string) {
   const queryClient = createTestQueryClient();
