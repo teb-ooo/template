@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces DAT-6, DAT-7, DAT-8 and DAT-9: it applies the app's goose migrations to a throwaway schema of the test
+// Enforces the table conventions of docs/data-and-secrets.md (Migrations): it applies the app's goose migrations to a throwaway schema of the test
 // database and inspects the real catalog. Every table (goose's own table excluded) must have
 //   - a single-column primary key `id` of type uuid,
 //   - `created_at` and `updated_at` as timestamptz NOT NULL DEFAULT now(),
@@ -136,30 +136,30 @@ func TestContractSchema(t *testing.T) {
 			t.Errorf("table %s: %s; %s", table, fmt.Sprintf(format, args...), contractSeeDocs)
 		}
 		if !contractSnakeCase.MatchString(table) {
-			fail("DAT-9 name is not snake_case")
+			fail("table convention: the name is not snake_case (docs/data-and-secrets.md, Migrations)")
 		}
 		for name, c := range cols {
 			if !contractSnakeCase.MatchString(name) {
-				fail("DAT-9 column %q is not snake_case", name)
+				fail("table convention: column %q is not snake_case (docs/data-and-secrets.md, Migrations)", name)
 			}
 			if strings.HasPrefix(c.typ, "timestamp") && c.typ != "timestamp with time zone" {
-				fail("DAT-8 column %q is %s, want timestamptz", name, c.typ)
+				fail("table convention: column %q is %s, want timestamptz (docs/data-and-secrets.md, Migrations)", name, c.typ)
 			}
 		}
 		if id, ok := cols["id"]; !ok || id.typ != "uuid" || !id.pk {
-			fail("DAT-6 needs id uuid as the primary key (found %+v)", cols["id"])
+			fail("table convention: needs id uuid as the primary key (found %+v) (docs/data-and-secrets.md, Migrations)", cols["id"])
 		}
 		for _, name := range []string{"created_at", "updated_at"} {
 			c, ok := cols[name]
 			switch {
 			case !ok:
-				fail("DAT-6 has no %s column", name)
+				fail("table convention: has no %s column (docs/data-and-secrets.md, Migrations)", name)
 			case c.typ != "timestamp with time zone" || !c.notNull || c.def != "now()":
-				fail("DAT-6 %s must be timestamptz NOT NULL DEFAULT now() (found %s, not null %v, default %q)", name, c.typ, c.notNull, c.def)
+				fail("table convention: %s must be timestamptz NOT NULL DEFAULT now() (found %s, not null %v, default %q) (docs/data-and-secrets.md, Migrations)", name, c.typ, c.notNull, c.def)
 			}
 		}
 		if _, ok := cols["updated_at"]; ok && !trig[table] {
-			fail("DAT-7 has no BEFORE UPDATE row trigger that sets NEW.updated_at (use set_updated_at())")
+			fail("table convention: has no BEFORE UPDATE row trigger that sets NEW.updated_at (use set_updated_at()) (docs/data-and-secrets.md, Migrations)")
 		}
 	}
 	if len(tables) == 0 {

@@ -1,7 +1,7 @@
 // Contract test helper, playground-owned (listed in .playground-files; do not edit in an app).
 //
 // requireTestDB is how every playground-owned test that needs the throwaway test database gets its URL. The
-// database-backed contract tests (TestContractSchema DAT-6..9, TestContractSmokeWithoutCredentials REL-3) must never
+// database-backed contract tests (TestContractSchema (the table conventions), TestContractSmokeWithoutCredentials REL-3) must never
 // pass silently without a database: bin/playground-app test (and restart, gate-check) provide
 // PLAYGROUND_TEST_DATABASE_URL (the app's staging database; the tests only create and drop a throwaway c_<uuid>
 // schema) and set PLAYGROUND_REQUIRE_DB=1. With PLAYGROUND_REQUIRE_DB=1 or CI=1 a missing URL FAILS the test; without
