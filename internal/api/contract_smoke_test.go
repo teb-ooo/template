@@ -1,6 +1,6 @@
 // Contract test, playground-owned (listed in .playground-files; do not edit in an app).
 //
-// Enforces REL-3: routes that depend on playd, the registry or other platform services MUST degrade to a clear
+// Enforces (docs/build-and-promotion.md): routes that depend on playd, the registry or other platform services MUST degrade to a clear
 // unavailable state. The gate candidate has no platform credentials, so this test starts the API with none
 // (testConfig sets no PLAYD_URL, PLAYD_TOKEN, PLAYD_ASSERTION_KEY or STAGING_GATE_TOKEN) and with the throwaway
 // migrated database, then GETs every operation of the OpenAPI document that has no path parameter and no required
@@ -56,7 +56,7 @@ func TestContractSmokeWithoutCredentials(t *testing.T) {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						t.Errorf("REL-3 %s as %s panicked without platform credentials: %v; %s", o.name(), who, r, contractSeeDocs)
+						t.Errorf("platform services unavailable: %s as %s panicked without platform credentials: %v; %s", o.name(), who, r, contractSeeDocs)
 					}
 				}()
 				if contractIsEventStream(o) {
@@ -71,7 +71,7 @@ func TestContractSmokeWithoutCredentials(t *testing.T) {
 			if rec.Code == http.StatusServiceUnavailable && strings.HasPrefix(rec.Header().Get("Content-Type"), "application/problem+json") {
 				continue
 			}
-			t.Errorf("REL-3 %s as %s answered %d without platform credentials (%s), want a 4xx or a 503 application/problem+json: return huma.Error503ServiceUnavailable; %s",
+			t.Errorf("platform services unavailable: %s as %s answered %d without platform credentials (%s), want a 4xx or a 503 application/problem+json: return huma.Error503ServiceUnavailable; %s",
 				o.name(), who, rec.Code, rec.Header().Get("Content-Type"), contractSeeDocs)
 		}
 	}
