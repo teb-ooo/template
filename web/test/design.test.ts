@@ -55,6 +55,16 @@ const THEME_PATH = join(PACKAGE_ROOT, THEME_FILE);
 /** In an app: the one file (path relative to web/, exact match) that may name colours directly. */
 const COLORS_FILE = "src/colors.css";
 
+/**
+ * In an app: the custom zone (path relative to web/). Pixels drawn by a canvas or WebGL display (a waterfall, a spectrum, meters)
+ * cannot use the theme's tokens, so the colour, size, radius and typography checks skip it. Everything else still applies
+ * there: no raw <button>, no title attribute, no theme control, no other product's name. The chrome around a display (buttons,
+ * labels, panels) is built from @teb-ooo/ui outside the zone. See docs/design-system.md, "Custom drawing".
+ */
+const CUSTOM_ZONE = "src/custom/";
+const inCustomZone = (rel: string, isUiPackage: boolean): boolean =>
+  !isUiPackage && rel.split(sep).join("/").startsWith(CUSTOM_ZONE);
+
 const SKIP_DIRS = new Set(["node_modules", "generated"]);
 
 function walk(dir: string, out: string[]): void {
@@ -82,7 +92,7 @@ const isComponentSource = (f: string): boolean =>
 const shown = (f: string): string => relative(PACKAGE_ROOT, f);
 /** Exact, path-relative match: `web/src/colors.css` only (not a prefix, a glob, or a nested or renamed file). */
 const allowsColours = (rel: string, isUiPackage: boolean): boolean =>
-  !isUiPackage && rel.split(sep).join("/") === COLORS_FILE;
+  !isUiPackage && (rel.split(sep).join("/") === COLORS_FILE || inCustomZone(rel, isUiPackage));
 const isColours = (f: string): boolean => allowsColours(shown(f), IS_UI_PACKAGE);
 
 interface Hit {
@@ -91,10 +101,14 @@ interface Hit {
   text: string;
 }
 
-function find(re: RegExp, opts: { skip?: (f: string) => boolean; lineFilter?: (line: string) => boolean } = {}): Hit[] {
+function find(
+  re: RegExp,
+  opts: { skip?: (f: string) => boolean; lineFilter?: (line: string) => boolean; zoneApplies?: boolean } = {},
+): Hit[] {
   const hits: Hit[] = [];
   for (const f of files) {
     if (opts.skip?.(f)) continue;
+    if (!opts.zoneApplies && inCustomZone(shown(f), IS_UI_PACKAGE)) continue;
     const lines = readFileSync(f, "utf8").split("\n");
     lines.forEach((text, i) => {
       if (opts.lineFilter && !opts.lineFilter(text)) return;
@@ -156,32 +170,34 @@ describe("design language", () => {
 
   it("uses no neutral- scale, no important, and no near-white text steps", () => {
     expectNone(find(/neutral-/, { skip: isColours }), "the neutrals are semantic tokens (ink, ink-muted, ink-faint)");
-    expectNone(find(/!important/), "no !important");
+    expectNone(find(/!important/, { zoneApplies: true }), "no !important");
     expectNone(find(/text-(neutral|stone)-(100|200)\b/, { skip: isColours }), "use text-ink");
   });
 
   it("has no dark: variants: tokens carry both themes", () => {
-    expectNone(find(/(?<![-\w])dark:/), "components never branch on the theme");
+    expectNone(find(/(?<![-\w])dark:/, { zoneApplies: true }), "components never branch on the theme");
   });
 
   it("has no theme control: no theme storage and no data-theme assignment (apps follow prefers-color-scheme)", () => {
     expectNone(
       find(
         /\b(?:local|session)Storage\b[^\n]*(?:theme|color-scheme|prefers)|(?:theme|color-scheme|prefers)[^\n]*\b(?:local|session)Storage\b/i,
+        { zoneApplies: true },
       ),
       "no stored theme preference",
     );
     expectNone(
       find(/\bsetAttribute\(\s*["'`]data-theme|\bdataset\.theme\b|\bdata-theme\s*=|\[["']data-theme["']\]\s*=/, {
         skip: isTheme,
+        zoneApplies: true,
       }),
       "only a gallery forces a theme; components and apps never set data-theme",
     );
-    expectNone(find(/\bmatchMedia\([^)]*prefers-color-scheme/), "no JS theming: the CSS follows the OS by itself");
+    expectNone(find(/\bmatchMedia\([^)]*prefers-color-scheme/, { zoneApplies: true }), "no JS theming: the CSS follows the OS by itself");
   });
 
   it("has no raw <button outside component sources", () => {
-    expectNone(find(/<button\b/, { skip: isComponentSource }), "use Button (or LinkButton for navigation)");
+    expectNone(find(/<button\b/, { skip: isComponentSource, zoneApplies: true }), "use Button (or LinkButton for navigation)");
   });
 
   it("puts no title attribute on a control (use the tip prop / Tooltip)", () => {
@@ -218,7 +234,7 @@ describe("design language", () => {
       (n) => n !== own && (IS_UI_PACKAGE || n !== "tiptap"),
     ); // an app may use the TipTap editor library (its @tiptap/* imports and .tiptap class are code, not copy); only the ui package stays free of it
     const names = new RegExp(`\\b(${banned.join("|")})\\b`, "i");
-    expectNone(find(names), "nothing shipped names another product");
+    expectNone(find(names, { zoneApplies: true }), "nothing shipped names another product");
     if (IS_UI_PACKAGE) {
       const extra = [
         "README.md",
@@ -256,6 +272,23 @@ function colourHits(entries: { rel: string; text: string }[], isUiPackage = fals
     allowsColours(e.rel, isUiPackage) ? [] : rules.filter((re) => re.test(e.text)).map(() => e.rel),
   );
 }
+
+describe("the custom zone (web/src/custom/)", () => {
+  const sample = ".a { color: #ff0000; border-radius: 12px; font-size: 11px; } const c = 'rgba(0, 0, 0, 0.5)'; const p = 'rose-500';";
+  const at = (rel: string): string[] => colourHits([{ rel, text: sample }]);
+
+  it("lets drawing code name colours", () => {
+    expect(at("src/custom/waterfall.ts")).toEqual([]);
+    expect(at(["src", "custom", "gl", "palette.ts"].join(sep))).toEqual([]);
+  });
+
+  it("is exactly that directory: look-alikes and the ui package are still checked", () => {
+    for (const rel of ["src/customs/a.ts", "src/custom.ts", "src/x/custom/a.ts", "custom/a.ts", "src/Custom/a.ts"]) {
+      expect(at(rel).length, rel).toBeGreaterThan(0);
+    }
+    expect(colourHits([{ rel: "src/custom/a.ts", text: sample }], true).length).toBeGreaterThan(0);
+  });
+});
 
 describe("direct colours are allowed in web/src/colors.css only", () => {
   const sample =
