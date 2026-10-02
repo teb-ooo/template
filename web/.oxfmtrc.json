@@ -14,6 +14,15 @@
     "src/routeTree.gen.ts",
     "package.json",
     "package-lock.json",
-    "public"
+    "public",
+    "test/api-generated-fresh.test.ts",
+    "test/design.test.ts",
+    "test/spec-import.test.ts",
+    "test/typescript-strict.test.ts",
+    "test/state-libs.test.ts",
+    "test/no-raw-fetch.test.ts",
+    "test/platform-shell.test.ts",
+    ".oxlintrc.json",
+    ".oxfmtrc.json"
   ]
 }
