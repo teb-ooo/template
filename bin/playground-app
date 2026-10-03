@@ -6,7 +6,7 @@
 #               app per day; it ends by itself after 30 idle minutes or 2 hours. Guide: /playground/brain/docs/browser-lab.md (shared brain).
 # playground-app restart [--quick] | build | test | smoke [--grep <pattern>] | gate-check | status | promote <vX.Y.Z>
 #   restart     build + tests + swap the Go server + the full browser smoke test. `restart --quick` stops after the swap (no browser sweep): use it for Go, API,
-#               dependency and migration changes while you iterate; the full sweep is for `gate-check` before a tag. A frontend-only change needs neither: the
+#               dependency and migration changes while you iterate; the full sweep is for `gate-check` when you want a rehearsal. A frontend-only change needs neither: the
 #               dev server (HMR) already serves it, so check it there with the type check, the unit tests and `smoke --grep <the flow>`.
 #   build       `npm ci` runs only when web/package-lock.json changed since the last install (a needless `npm ci` wipes node_modules and
 #               restarts the Vite dev server under you).
@@ -14,18 +14,18 @@
 #   test        .npmrc and release-age checks, go vet, go test with PLAYGROUND_TEST_DATABASE_URL (default: DATABASE_URL, the
 #               staging database; only a throwaway c_<uuid> schema is created and dropped) and PLAYGROUND_REQUIRE_DB=1, then
 #               "contract tests: N ran, M skipped"; a contract test that cannot run FAILS (never skips). restart and gate-check run it too.
-#   gate-check  rehearse the promotion gate before you tag: build the server, start it on a spare port with the
+#   gate-check  (optional) rehearse the promotion gate before you tag: build the server, start it on a spare port with the
 #               CANDIDATE's environment (no PLAYD_TOKEN, PLAYD_URL, STAGING_GATE_TOKEN or other platform credentials,
 #               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
 #               and run `npm run test:e2e` against it. Prints GATE-CHECK PASS or FAIL and exits non-zero on failure.
-#               It never touches the running staging app or its data. Run it before every `playground promote` tag.
+#               It never touches the running staging app or its data. Not required before a tag (the promotion gate repeats the browser test on the production image and a failed promotion changes nothing in production): use it to save yourself a failed promotion.
 #   status      the app and agent services, then `promotion: auto|manual` (playd's promote_mode for this app; unknown when playd does not answer).
 #   promote     promote the tag (already committed on main and pushed with the tag: git push origin main vX.Y.Z) to production YOURSELF.
 #               Only when `status` says `promotion: auto`; on manual it refuses and you ask the orchestrator (the owner decides, only the owner
 #               switches the mode). playd runs exactly the gates and steps of `playground promote` (tag on origin/main, version == tag,
 #               playground-owned files, release age, secret scan, parity test, browser smoke, migrations, health) and none can be skipped. A gate that fails is
 #               printed plainly and nothing changed. A promotion whose health check fails after the switch is rolled back to the previous
-#               image by playd (the database is not restored; the snapshot path is in the message). Run gate-check first; the history records you as app:<name> (auto).
+#               image by playd (the database is not restored; the snapshot path is in the message). gate-check beforehand is optional; the history records you as app:<name> (auto).
 case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status | promote   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
 set -euo pipefail
 cd "${PLAYGROUND_APP_DIR:-/app}"
