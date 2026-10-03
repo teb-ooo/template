@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# playground-app browser start --reason "..." | stop | status
+#   browser     the BROWSER LAB: a shared, GPU-backed real Chrome that you drive over CDP (frame timing, audio capture, video, OS-level drag and
+#               wheel). Use agent-browser for normal end-to-end, functional and visual checks: it is enough for almost every app. start needs
+#               --reason (logged), prints the CDP and control URLs (use the IP, not a name); at most two labs on the whole box and six starts per
+#               app per day; it ends by itself after 30 idle minutes or 2 hours. Guide: /playground/brain/docs/browser-lab.md (shared brain).
 # playground-app restart [--quick] | build | test | smoke [--grep <pattern>] | gate-check | status | promote <vX.Y.Z>
 #   restart     build + tests + swap the Go server + the full browser smoke test. `restart --quick` stops after the swap (no browser sweep): use it for Go, API,
 #               dependency and migration changes while you iterate; the full sweep is for `gate-check` before a tag. A frontend-only change needs neither: the
@@ -226,10 +231,28 @@ case "${1:-}" in
     echo "up"
     if [ "${2:-}" = --quick ]; then echo "restart --quick: no browser sweep; run \`playground-app smoke --grep <flow>\` for what you changed and gate-check before a tag"; exit 0; fi
     "$0" smoke ;;
+  browser)
+    sub="${2:-status}"; reason=""
+    if [ "$sub" = start ]; then
+      [ "${3:-}" = --reason ] && [ -n "${4:-}" ] || { echo "usage: playground-app browser start --reason \"why a real browser is needed\"" >&2; exit 2; }
+      reason="$4"
+    fi
+    [ -n "${PLAYD_TOKEN:-}" ] && [ -n "${APP_NAME:-}" ] || { echo "browser: PLAYD_TOKEN and APP_NAME are not set; run this inside the app's agent container" >&2; exit 1; }
+    case "$sub" in
+      start) playd_call POST "/v1/apps/$APP_NAME/browser" "$(jq -cn --arg r "$reason" '{reason:$r}')" ;;
+      stop)  playd_call DELETE "/v1/apps/$APP_NAME/browser" ;;
+      status) playd_call GET "/v1/apps/$APP_NAME/browser" ;;
+      *) echo "usage: playground-app browser start --reason \"...\" | stop | status" >&2; exit 2 ;;
+    esac
+    case "$PD_STATUS" in
+      2*) if [ "$sub" = start ]; then jq -r '"browser lab running: cdp \(.cdp)  control \(.control)  ends by \(.expires_at)\n\(.note)"' <<<"$PD_BODY"; else jq -r . <<<"${PD_BODY:-{}}"; fi ;;
+      *) echo "browser: playd answered $PD_STATUS: $(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null)" >&2; exit 1 ;;
+    esac
+    exit 0 ;;
   status)
     rc=0; s6-svstat /run/service/app /run/service/claude || rc=$?
     echo "promotion: $(promotion_mode)"
     exit "$rc" ;;
   promote) promote_tag "${2:-}"; exit $? ;;
-  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|promote <vX.Y.Z>" >&2; exit 2 ;;
+  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote <vX.Y.Z>" >&2; exit 2 ;;
 esac
