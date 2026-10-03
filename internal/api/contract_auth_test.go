@@ -192,8 +192,7 @@ func contractEnv(t testing.TB) playground.Config {
 		"APP_NAME": "app", "APP_ENV": "staging", "PUBLIC_URL": "http://localhost:8080",
 		"DATABASE_URL": "postgres://app@127.0.0.1:1/app", "OIDC_ISSUER": "http://127.0.0.1:1",
 		"OIDC_CLIENT_ID": "test", "OIDC_CLIENT_SECRET": "test-not-a-secret",
-		"SESSION_KEY":       strings.Repeat("ab", 32),
-		"ANTHROPIC_API_KEY": "test-not-a-key", // builds the assistant overlay when present; never called
+		"SESSION_KEY": strings.Repeat("ab", 32),
 	}
 	cfg, err := playground.FromEnv(func(k string) string { return env[k] })
 	if err != nil {

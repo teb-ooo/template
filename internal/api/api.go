@@ -39,19 +39,6 @@ type Deps struct {
 // A resource file adds its hook from init, so api.go never changes.
 var registrations []func(*Deps)
 
-// mounts run after it: they mount handlers that derive tools from the API (the assistant overlay).
-var mounts []func(*Deps)
-
-// assistantEnabled is set by the assistant overlay's init: only apps generated with the overlay tell the web
-// app that the assistant exists, whatever PLAYGROUND_ASSISTANT says.
-var assistantEnabled bool
-
-func spaConfig(cfg playground.Config) spa.Config {
-	c := cfg.SPA()
-	c.Assistant = assistantEnabled
-	return c
-}
-
 // New builds the whole application handler.
 func New(cfg playground.Config, pool *pgxpool.Pool) http.Handler {
 	h, _, _ := build(cfg, pool)
@@ -85,15 +72,12 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 	if s, ok := mcpH.(*openapimcp.Server); ok {
 		s.RegisterMetadata(mux) // /.well-known/oauth-protected-resource
 	}
-	for _, mount := range mounts {
-		mount(d)
-	}
 
 	dist, err := fs.Sub(web.Dist, "dist")
 	if err != nil {
 		panic("api: " + err.Error())
 	}
-	mux.Handle("/", spa.Handler(dist, spaConfig(cfg)))
+	mux.Handle("/", spa.Handler(dist, cfg.SPA()))
 
 	return playgroundlog.Middleware(authn.Middleware(mux)), humaAPI, mcpH
 }

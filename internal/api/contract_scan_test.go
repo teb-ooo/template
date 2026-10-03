@@ -1,5 +1,5 @@
 // Shared scanner for the playground-owned source contract tests (listed in .playground-files; do not edit in an app):
-// contract_imports_test.go (email, sign-in and assistant conventions), contract_sql_test.go (SQL convention), contract_errors_test.go (Huma error
+// contract_imports_test.go (email and sign-in conventions), contract_sql_test.go (SQL convention), contract_errors_test.go (Huma error
 // convention) and contract_migrations_test.go (migration convention).
 //
 // It parses Go files with go/parser. Test files (*_test.go), generated files (a "Code generated ... DO NOT EDIT."

@@ -19,8 +19,7 @@ func testConfig(t testing.TB, override map[string]string) playground.Config {
 		"APP_NAME": "app", "APP_ENV": "staging", "PUBLIC_URL": "http://localhost:8080",
 		"DATABASE_URL": "postgres://app@127.0.0.1:1/app", "OIDC_ISSUER": "http://127.0.0.1:1",
 		"OIDC_CLIENT_ID": "test", "OIDC_CLIENT_SECRET": "test-not-a-secret",
-		"SESSION_KEY":       strings.Repeat("ab", 32),
-		"ANTHROPIC_API_KEY": "test-not-a-key", // builds the assistant overlay when present; never called
+		"SESSION_KEY": strings.Repeat("ab", 32),
 	}
 	for k, v := range override {
 		env[k] = v
@@ -58,16 +57,9 @@ func TestOpenAPIHidesInfrastructureRoutes(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("openapi.json = %d", rec.Code)
 	}
-	for _, hidden := range []string{"/healthz", "/auth/me", "/api/assistant"} {
+	for _, hidden := range []string{"/healthz", "/auth/me"} {
 		if strings.Contains(rec.Body.String(), hidden) {
 			t.Errorf("openapi.json mentions %s", hidden)
 		}
-	}
-}
-
-func TestSPAConfigAssistantFlag(t *testing.T) {
-	cfg := testConfig(t, map[string]string{"PLAYGROUND_ASSISTANT": "true"})
-	if got := spaConfig(cfg).Assistant; got != assistantEnabled {
-		t.Fatalf("assistant flag = %v, want %v (set only by the overlay)", got, assistantEnabled)
 	}
 }

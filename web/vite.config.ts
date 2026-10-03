@@ -8,8 +8,8 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 const backend = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 export default defineConfig({
-  // The router plugin regenerates src/routeTree.gen.ts on dev and build, so route files added by the optional
-  // assistant overlay are picked up without a manual step. It must come before the React plugin.
+  // The router plugin regenerates src/routeTree.gen.ts on dev and build, so route files added later are picked
+  // up without a manual step. It must come before the React plugin.
   plugins: [
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
