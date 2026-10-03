@@ -245,7 +245,7 @@ case "${1:-}" in
       *) echo "usage: playground-app browser start --reason \"...\" | stop | status" >&2; exit 2 ;;
     esac
     case "$PD_STATUS" in
-      2*) if [ "$sub" = start ]; then jq -r '"browser lab running: cdp \(.cdp)  control \(.control)  ends by \(.expires_at)\n\(.note)"' <<<"$PD_BODY"; else jq -r . <<<"${PD_BODY:-{}}"; fi ;;
+      2*) if [ "$sub" = start ]; then jq -r '"browser lab running: cdp \(.cdp)  control \(.control)  ends by \(.expires_at)\n\(.note)"' <<<"$PD_BODY"; else printf '%s\n' "${PD_BODY:-}" | jq -r . 2>/dev/null || printf '%s\n' "${PD_BODY:-}"; fi ;;
       *) echo "browser: playd answered $PD_STATUS: $(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null)" >&2; exit 1 ;;
     esac
     exit 0 ;;
