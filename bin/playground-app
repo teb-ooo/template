@@ -18,6 +18,9 @@
 #               CANDIDATE's environment (no PLAYD_TOKEN, PLAYD_URL, STAGING_GATE_TOKEN or other platform credentials,
 #               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
 #               and run `npm run test:e2e` against it. Prints GATE-CHECK PASS or FAIL and exits non-zero on failure.
+#               Granular: `gate-check --grep <pattern>` runs only the browser tests whose title matches (Playwright --grep), `--skip-tests`
+#               skips go vet / go test (`playground-app test` runs them alone), `--skip-web-build` reuses web/dist; a run with any of them prints
+#               "GATE-CHECK PASS (partial: ...)". What only gate-check does: the candidate's environment (no platform credentials, a throwaway schema).
 #               It never touches the running staging app or its data. Not required before a tag (the promotion gate repeats the browser test on the production image and a failed promotion changes nothing in production): use it to save yourself a failed promotion.
 #   status      the app and agent services, then `promotion: auto|manual` (playd's promote_mode for this app; unknown when playd does not answer).
 #   promote     promote the tag (already committed on main and pushed with the tag: git push origin main vX.Y.Z) to production YOURSELF.
@@ -160,23 +163,35 @@ case "${1:-}" in
     # test sees). Differences from the real gate: this runs the Go binary (not the production image), in the staging
     # container, with a throwaway schema (not a throwaway database), on localhost (not a throwaway network), and
     # skips `npm ci` when node_modules exists.
+    shift
+    GC_GREP=""; GC_SKIP_TESTS=""; GC_SKIP_BUILD=""; GC_PARTIAL=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --grep) [ -n "${2:-}" ] || { echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build]" >&2; exit 2; }; GC_GREP="$2"; GC_PARTIAL="$GC_PARTIAL --grep"; shift 2 ;;
+        --skip-tests) GC_SKIP_TESTS=1; GC_PARTIAL="$GC_PARTIAL --skip-tests"; shift ;;
+        --skip-web-build) GC_SKIP_BUILD=1; GC_PARTIAL="$GC_PARTIAL --skip-web-build"; shift ;;
+        *) echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build]" >&2; exit 2 ;;
+      esac
+    done
     GC=$(mktemp -d "${TMPDIR:-/tmp}/gate-check.XXXXXX")
     GC_PID=""; GC_SCHEMA=""; GC_RESULT=FAIL
     gc_cleanup() {
       [ -n "$GC_PID" ] && kill "$GC_PID" 2>/dev/null && wait "$GC_PID" 2>/dev/null || true
       if [ -n "$GC_SCHEMA" ]; then psql "$DATABASE_URL" -qAtc "DROP SCHEMA IF EXISTS $GC_SCHEMA CASCADE" >/dev/null 2>&1 || echo "gate-check: could not drop throwaway schema $GC_SCHEMA" >&2; fi
       rm -rf "$GC"
-      echo "GATE-CHECK $GC_RESULT"
+      if [ -n "$GC_PARTIAL" ] && [ "$GC_RESULT" = PASS ]; then echo "GATE-CHECK PASS (partial:$GC_PARTIAL; not the full gate-check)"; else echo "GATE-CHECK $GC_RESULT"; fi
     }
     trap gc_cleanup EXIT
     : "${DATABASE_URL:?DATABASE_URL is not set}"
     echo "gate-check: building the server"
-    (cd web && web_install && npm run build >/dev/null)
+    if [ -n "$GC_SKIP_BUILD" ]; then echo "gate-check: --skip-web-build, using the web/dist that is there"; else (cd web && web_install && npm run build >/dev/null); fi
     node /playground/rules/tools/check-no-eval.mjs web/dist
     node /playground/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
-    echo "gate-check: go vet and go test (the contract tests included)"
-    go_tests --reuse || exit 1
+    if [ -n "$GC_SKIP_TESTS" ]; then echo "gate-check: --skip-tests (run \`playground-app test\` for go vet and go test)"; else
+      echo "gate-check: go vet and go test (the contract tests included)"
+      go_tests --reuse || exit 1
+    fi
     CGO_ENABLED=0 go build -ldflags "-X main.version=gate-check" -o "$GC/server" ./cmd/server
     # a spare port: the first one nothing listens on
     GC_PORT=""
@@ -215,7 +230,7 @@ case "${1:-}" in
     set +e
     (cd web && env -u PLAYD_TOKEN -u PLAYD_URL -u PLAYD_ASSERTION_KEY -u STAGING_GATE_TOKEN -u ANTHROPIC_API_KEY \
       BASE_URL="http://127.0.0.1:$GC_PORT" SESSION_COOKIE="$SESSION_COOKIE" SESSION_KEY="$GC_KEY" CI=1 \
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" npm run test:e2e)
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" npm run test:e2e ${GC_GREP:+-- --grep "$GC_GREP"})
     rc=$?
     set -e
     if [ "$rc" -eq 0 ]; then GC_RESULT=PASS; else echo "gate-check: the candidate's last log lines:" >&2; tail -n 10 "$GC/server.log" >&2; fi
