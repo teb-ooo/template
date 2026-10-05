@@ -134,10 +134,6 @@ case "${1:-}" in
   build)
     (cd web && web_install && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
-    if [ -n "$GC_SKIP_LINT" ]; then echo "gate-check: --skip-lint"; else
-      echo "gate-check: lint (oxlint with the playground's config: errors fail, warnings do not)"
-      (cd web && npm run lint) || { echo "gate-check: lint errors (fix them, or run with --skip-lint to rehearse the rest)" >&2; exit 1; }
-    fi
     node /playground/rules/tools/check-no-eval.mjs web/dist
     # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
     node /playground/rules/tools/check-no-dev.mjs web/dist
@@ -190,6 +186,10 @@ case "${1:-}" in
     : "${DATABASE_URL:?DATABASE_URL is not set}"
     echo "gate-check: building the server"
     if [ -n "$GC_SKIP_BUILD" ]; then echo "gate-check: --skip-web-build, using the web/dist that is there"; else (cd web && web_install && npm run build >/dev/null); fi
+    if [ -n "$GC_SKIP_LINT" ]; then echo "gate-check: --skip-lint"; else
+      echo "gate-check: lint (oxlint with the playground's config: errors fail, warnings do not)"
+      (cd web && npm run lint) || { echo "gate-check: lint errors (fix them, or run with --skip-lint to rehearse the rest)" >&2; exit 1; }
+    fi
     node /playground/rules/tools/check-no-eval.mjs web/dist
     node /playground/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
