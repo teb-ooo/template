@@ -1,3 +1,6 @@
+// Platform-owned (listed in .playground-files; do not edit in an app). The app-specific parts live in the app-owned seam
+// parity_app_test.go: extra test environment (appTestEnv), extra routes that must stay out of openapi.json (parityHidden) and
+// ParityCheck options such as exemptions (parityOptions).
 package api
 
 import (
@@ -20,6 +23,9 @@ func testConfig(t testing.TB, override map[string]string) playground.Config {
 		"DATABASE_URL": "postgres://app@127.0.0.1:1/app", "OIDC_ISSUER": "http://127.0.0.1:1",
 		"OIDC_CLIENT_ID": "test", "OIDC_CLIENT_SECRET": "test-not-a-secret",
 		"SESSION_KEY": strings.Repeat("ab", 32),
+	}
+	for k, v := range appTestEnv {
+		env[k] = v
 	}
 	for k, v := range override {
 		env[k] = v
@@ -46,7 +52,7 @@ func lazyPool(t testing.TB, url string) *pgxpool.Pool {
 func TestParity(t *testing.T) {
 	cfg := testConfig(t, nil)
 	_, humaAPI, mcpH := build(cfg, lazyPool(t, cfg.DatabaseURL))
-	openapimcp.ParityCheck(t, humaAPI, mcpH)
+	openapimcp.ParityCheck(t, humaAPI, mcpH, parityOptions...)
 }
 
 func TestOpenAPIHidesInfrastructureRoutes(t *testing.T) {
@@ -57,7 +63,7 @@ func TestOpenAPIHidesInfrastructureRoutes(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("openapi.json = %d", rec.Code)
 	}
-	for _, hidden := range []string{"/healthz", "/auth/me"} {
+	for _, hidden := range append([]string{"/healthz", "/auth/me"}, parityHidden...) {
 		if strings.Contains(rec.Body.String(), hidden) {
 			t.Errorf("openapi.json mentions %s", hidden)
 		}

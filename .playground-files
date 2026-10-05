@@ -41,3 +41,5 @@ internal/api/contract_imports_test.go
 internal/api/contract_sql_test.go
 internal/api/contract_migrations_test.go
 internal/api/contract_errors_test.go
+Makefile
+internal/api/parity_test.go
