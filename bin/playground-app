@@ -19,7 +19,7 @@
 #               APP_ENV=production, a throwaway Postgres schema and SESSION_KEY), mint the session cookie like the gate
 #               and run `npm run test:e2e` against it. Prints GATE-CHECK PASS or FAIL and exits non-zero on failure.
 #               Granular: `gate-check --grep <pattern>` runs only the browser tests whose title matches (Playwright --grep), `--skip-tests`
-#               skips go vet / go test (`playground-app test` runs them alone), `--skip-web-build` reuses web/dist; a run with any of them prints
+#               skips go vet / go test (`playground-app test` runs them alone), `--skip-web-build` reuses web/dist, `--skip-lint` skips oxlint (errors fail the gate-check); a run with any of them prints
 #               "GATE-CHECK PASS (partial: ...)". What only gate-check does: the candidate's environment (no platform credentials, a throwaway schema).
 #               It never touches the running staging app or its data. Not required before a tag (the promotion gate repeats the browser test on the production image and a failed promotion changes nothing in production): use it to save yourself a failed promotion.
 #   status      the app and agent services, then `promotion: auto|manual` (playd's promote_mode for this app; unknown when playd does not answer).
@@ -134,6 +134,10 @@ case "${1:-}" in
   build)
     (cd web && web_install && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
+    if [ -n "$GC_SKIP_LINT" ]; then echo "gate-check: --skip-lint"; else
+      echo "gate-check: lint (oxlint with the playground's config: errors fail, warnings do not)"
+      (cd web && npm run lint) || { echo "gate-check: lint errors (fix them, or run with --skip-lint to rehearse the rest)" >&2; exit 1; }
+    fi
     node /playground/rules/tools/check-no-eval.mjs web/dist
     # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
     node /playground/rules/tools/check-no-dev.mjs web/dist
@@ -164,13 +168,14 @@ case "${1:-}" in
     # container, with a throwaway schema (not a throwaway database), on localhost (not a throwaway network), and
     # skips `npm ci` when node_modules exists.
     shift
-    GC_GREP=""; GC_SKIP_TESTS=""; GC_SKIP_BUILD=""; GC_PARTIAL=""
+    GC_GREP=""; GC_SKIP_TESTS=""; GC_SKIP_BUILD=""; GC_SKIP_LINT=""; GC_PARTIAL=""
     while [ "$#" -gt 0 ]; do
       case "$1" in
-        --grep) [ -n "${2:-}" ] || { echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build]" >&2; exit 2; }; GC_GREP="$2"; GC_PARTIAL="$GC_PARTIAL --grep"; shift 2 ;;
+        --grep) [ -n "${2:-}" ] || { echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build] [--skip-lint]" >&2; exit 2; }; GC_GREP="$2"; GC_PARTIAL="$GC_PARTIAL --grep"; shift 2 ;;
         --skip-tests) GC_SKIP_TESTS=1; GC_PARTIAL="$GC_PARTIAL --skip-tests"; shift ;;
         --skip-web-build) GC_SKIP_BUILD=1; GC_PARTIAL="$GC_PARTIAL --skip-web-build"; shift ;;
-        *) echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build]" >&2; exit 2 ;;
+        --skip-lint) GC_SKIP_LINT=1; GC_PARTIAL="$GC_PARTIAL --skip-lint"; shift ;;
+        *) echo "usage: playground-app gate-check [--grep <pattern>] [--skip-tests] [--skip-web-build] [--skip-lint]" >&2; exit 2 ;;
       esac
     done
     GC=$(mktemp -d "${TMPDIR:-/tmp}/gate-check.XXXXXX")

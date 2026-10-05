@@ -26,10 +26,16 @@
     {
       "files": ["test/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"],
       "rules": { "typescript/no-non-null-assertion": "off" }
+    },
+    {
+      // Playwright fixtures call a callback named `use`; it is not a React hook
+      "files": ["e2e/**"],
+      "rules": { "react/rules-of-hooks": "off" }
     }
   ],
   "ignorePatterns": [
     "dist",
+    "public",
     "test-results",
     "playwright-report",
     "e2e/__screenshots__",
