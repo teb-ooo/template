@@ -5,3 +5,5 @@ command -v gitleaks >/dev/null || { echo "pre-commit: gitleaks is not installed"
 cfg="$(git rev-parse --show-toplevel)/.gitleaks.toml"
 gitleaks git --pre-commit --staged --redact --no-banner --config "$cfg" \
   || { echo "pre-commit: possible secret staged (values are redacted above). Remove it and rotate it with 'playground secrets set'; never commit secrets." >&2; exit 1; }
+# The brain check runs here, when a brain file is committed (the kit owns the logic, so it can change without touching this file).
+if [ -x /opt/playground-kit/bin/check-brain-staged ]; then /opt/playground-kit/bin/check-brain-staged; fi
