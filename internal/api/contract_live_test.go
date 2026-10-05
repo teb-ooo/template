@@ -25,6 +25,10 @@ import (
 )
 
 func TestContractLiveStream(t *testing.T) {
+	if contractLiveExempt != "" { // the app's own seam (contract_app_test.go) records why it has no live stream
+		t.Logf("UI-yvn: this app is exempt from the live stream: %s", contractLiveExempt)
+		return
+	}
 	cfg := contractEnv(t)
 	h, humaAPI := contractAPI(t, contractLazyPool(t, cfg.DatabaseURL), cfg)
 	for path := range humaAPI.OpenAPI().Paths {
