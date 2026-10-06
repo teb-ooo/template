@@ -23,6 +23,13 @@ const textLink = "text-ink-muted underline";
 // no sign-in or sign-out control: web/test/platform-shell.test.ts fails the app that does. App-specific navigation goes in
 // the sidebar below, the page body and Cmd+K commands (`useRegisterCommands`).
 function RootLayout() {
+  // The entrance and invitation pages are for people who are not signed in: no platform bar, no live data around them.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname === "/enter" || pathname === "/invite") return <Outlet />;
+  return <SignedInLayout />;
+}
+
+function SignedInLayout() {
   // Live data (rule UI-yvn): the server tells this screen which resource changed (GET /api/live) and the generated
   // queries under it refetch. Call useLive() once, here at the root; it is off by itself under a test browser
   // (navigator.webdriver, or ?live=0). The bar's live dot follows it by itself. A screen that polls can stop while

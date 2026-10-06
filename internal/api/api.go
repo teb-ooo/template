@@ -47,7 +47,8 @@ func New(cfg playground.Config, pool *pgxpool.Pool) http.Handler {
 
 // build also returns the Huma API and the MCP handler, which the parity test needs.
 func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, http.Handler) {
-	authn, err := cfg.NewAuth()
+	// Sign-in problems go to the entrance page (web/src/routes/enter.tsx) as /enter?problem=<code>.
+	authn, err := cfg.NewAuth(auth.WithEntrance("/enter"))
 	if err != nil {
 		panic("api: " + err.Error())
 	}

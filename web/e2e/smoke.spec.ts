@@ -184,11 +184,10 @@ test.describe("command palette", () => {
 
 // Signed out, a guarded page must send the browser to the sign-in page (a real document load), not render the
 // router's not-found page. The sign-in page itself is served by the Go app and redirects to the identity
-// provider, which a test cannot reach, so its response is stubbed.
-test("signed out: the start page navigates to /auth/login instead of rendering not-found", async ({
-  page,
-  context,
-}) => {
+// provider, which a test cannot reach, so its response is stubbed. In production mode (the promotion gate runs the
+// candidate that way) the visitor meets the app's own entrance page first (/enter, docs/login-for-apps.md), whose
+// Enter link leads to /auth/login with the same `next`.
+test("signed out: the start page leads to the sign-in instead of rendering not-found", async ({ page, context }) => {
   await context.clearCookies();
   let loginRequests = 0;
   await context.route("**/auth/login**", (route) => {
@@ -196,6 +195,12 @@ test("signed out: the start page navigates to /auth/login instead of rendering n
     return route.fulfill({ status: 200, contentType: "text/html", body: "<title>sign in</title><p>sign-in page</p>" });
   });
   await page.goto("/");
+  await page.waitForURL(/\/(auth\/login|enter)\?next=%2F/);
+  if (page.url().includes("/enter?")) {
+    const enter = page.getByRole("link", { name: "Enter" });
+    await expect(enter).toHaveAttribute("href", "/auth/login?next=%2F");
+    await enter.click();
+  }
   await expect(page.getByText("sign-in page")).toBeVisible();
   expect(page.url()).toContain("/auth/login?next=%2F");
   expect(loginRequests).toBeGreaterThan(0);
