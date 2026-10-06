@@ -22,6 +22,7 @@
     "test/state-libs.test.ts",
     "test/no-raw-fetch.test.ts",
     "test/platform-shell.test.ts",
+    "test/entrance.test.ts",
     ".oxlintrc.json",
     ".oxfmtrc.json"
   ]
