@@ -10,6 +10,11 @@ COPY web/package*.json web/.npmrc ./
 # `npm-registry` host entry by playd (build.extra_hosts) because builds run on the default bridge network.
 RUN npm ci
 COPY web/ ./
+# Lint is a gate at promotion (owner decision 2026-10-05): playd's promotion build passes LINT=1, so a lint ERROR (warnings do not fail)
+# stops the build and the promotion with oxlint's output. Staging and rebuild builds leave LINT unset.
+ARG LINT=0
+# (the image has no .gitignore, so oxlint is told to skip node_modules itself)
+RUN if [ "$LINT" = "1" ]; then echo "lint gate: npm run lint"; npm run lint -- --ignore-pattern node_modules; fi
 RUN npm run build                      # -> /src/web/dist
 # Staging serves web/ through the Vite dev server (HMR); production never does. Fail the image build if dev-server code
 # or the staging CSP nonce ended up in the bundle.
