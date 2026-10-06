@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LinkButton } from "@teb-ooo/ui";
+import { EntrancePage } from "@teb-ooo/ui/entrance";
 import { platformUrl, playground } from "@teb-ooo/web";
 import { appName, safeNext } from "../lib/entrance";
 
@@ -26,8 +27,8 @@ function InvitePage() {
   q.set("next", safeNext(next));
   const href = flow && token ? platformUrl("id", `/invite?${q.toString()}`) : null;
   return (
-    <main className="flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
-      <h1 className="display-lg text-ink">You are invited to {appName()}</h1>
+    <EntrancePage title={`You are invited to ${appName()}`}>
+      <p className="display-lg text-ink">You are invited to {appName()}</p>
       {href ? (
         <LinkButton intent="solid" href={href}>
           Continue
@@ -37,6 +38,6 @@ function InvitePage() {
           This invitation link does not work. Ask the person who invited you for a new one.
         </p>
       )}
-    </main>
+    </EntrancePage>
   );
 }
