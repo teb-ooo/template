@@ -54,7 +54,7 @@ func run(args []string) error {
 		return err
 	}
 	cfg.Version = version
-	slog.SetDefault(playgroundlog.Setup(slog.LevelInfo))
+	slog.SetDefault(playgroundlog.Setup(playgroundlog.LevelFromEnv("LOG_LEVEL", slog.LevelInfo)))
 	slog.Info("starting", "config", cfg)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
