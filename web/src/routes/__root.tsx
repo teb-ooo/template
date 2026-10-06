@@ -2,9 +2,8 @@ import { Link, Outlet, createRootRouteWithContext, useRouterState } from "@tanst
 import type { QueryClient } from "@tanstack/react-query";
 import { CommandProvider } from "@teb-ooo/ui/cmdk";
 import { Shell, Sidebar } from "@teb-ooo/ui";
-import { isForbiddenError, useLive } from "@teb-ooo/web";
+import { describeError, isForbiddenError, useLive } from "@teb-ooo/web";
 import { Home } from "lucide-react";
-import { describeError } from "../api/describe-error";
 
 export interface RouterContext {
   queryClient: QueryClient;

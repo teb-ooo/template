@@ -136,7 +136,7 @@ export function describeRawCall(c: RawCall): string {
   return (
     `web/${c.file}:${c.line}: server-call convention (docs/web-ui.md, Structure): ${c.what} is a raw server call; server calls go only through the hooks @teb-ooo/web builds from src/api/schema.d.ts. ` +
     `To fix: add the operation to the Go API, run \`npm run gen:api\` and use api.useQuery("get", "/api/...") or api.useMutation(...); ` +
-    `if the route cannot be in the OpenAPI spec, put \`// ${MARKER} <reason>\` on that line or the line above; ${DOC}`
+    `if the call is outside the generated client (a route that is not in the OpenAPI spec), use \`platformFetch(url, init)\` and \`throwIfNotOk(res)\` from @teb-ooo/web (cookies, Accept JSON, X-Request-Id, an ApiError on failure) before reaching for the marker, and show errors with \`describeError(error)\` from the same package; only if neither fits put \`// ${MARKER} <reason>\` on that line or the line above; ${DOC}`
   );
 }
 
@@ -194,6 +194,7 @@ describe("the raw-call checker", () => {
     expect(msg).toContain("web/src/a.ts:1: server-call convention");
     expect(msg).toContain("npm run gen:api");
     expect(msg).toContain("playground:allow-fetch <reason>");
+    expect(msg).toContain("platformFetch");
     expect(msg.endsWith("see docs/web-ui.md")).toBe(true);
   });
 
