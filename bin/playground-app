@@ -53,9 +53,11 @@ promotion_mode() {
   case "$m" in auto|manual) echo "$m" ;; *) echo unknown ;; esac
 }
 # promote_tag TAG: the self-promotion. playd refuses it unless the app is on auto and then runs the one promotion service.
+# With --detach it returns as soon as playd has started the job; playd then sends the app's agent a message when the promotion ends.
 promote_tag() {
-  local tag="${1:-}" mode id rc=0 line t
-  if ! [[ "$tag" =~ ^v[0-9][0-9A-Za-z._+-]{0,60}$ ]]; then echo "usage: playground-app promote vX.Y.Z (a tag already on main and pushed)" >&2; return 2; fi
+  local tag="${1:-}" detach="" mode id rc=0 line t
+  if [ "${2:-}" = --detach ]; then detach=1; elif [ "$tag" = --detach ]; then detach=1; tag="${2:-}"; fi
+  if ! [[ "$tag" =~ ^v[0-9][0-9A-Za-z._+-]{0,60}$ ]]; then echo "usage: playground-app promote [--detach] vX.Y.Z (a tag already on main and pushed)" >&2; return 2; fi
   [ -n "${PLAYD_TOKEN:-}" ] && [ -n "${APP_NAME:-}" ] || { echo "promote: PLAYD_TOKEN and APP_NAME are not set; run this inside the app's agent container" >&2; return 1; }
   mode="$(promotion_mode)"
   case "$mode" in
@@ -63,13 +65,17 @@ promote_tag() {
     manual) echo "promote: refused. Promotion for $APP_NAME is MANUAL: you may not promote it yourself. Report [done] with the tag and ask the orchestrator; the owner decides (only the owner can switch this app to auto)." >&2; return 1 ;;
     *) echo "promote: refused. playd did not say which promotion mode $APP_NAME is in (unreachable or unexpected answer); treat it as MANUAL and ask the orchestrator." >&2; return 1 ;;
   esac
-  playd_call POST "/v1/apps/$APP_NAME/promote" "$(jq -cn --arg t "$tag" '{tag:$t}')"
+  playd_call POST "/v1/apps/$APP_NAME/promote" "$(jq -cn --arg t "$tag" --argjson n "$([ -n "$detach" ] && echo true || echo false)" 'if $n then {tag:$t, notify:true} else {tag:$t} end')"
   if [ "$PD_STATUS" != 202 ]; then
     echo "promote: refused by playd ($PD_STATUS): $(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null)" >&2
     return 1
   fi
   id="$(jq -r '.job_id // empty' <<<"$PD_BODY" 2>/dev/null)"
   [[ "$id" =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo "promote: playd did not return a job id" >&2; return 1; }
+  if [ -n "$detach" ]; then
+    echo "promotion of $tag started (job $id); the gates run first and it takes several minutes. Carry on with other work: the platform messages you when it ends (success or failure)."
+    return 0
+  fi
   echo "promoting $tag of $APP_NAME (job $id); the gates run first, this can take several minutes"
   local done_seen=""
   while IFS= read -r line; do
@@ -279,6 +285,6 @@ case "${1:-}" in
     rc=0; s6-svstat /run/service/app /run/service/claude || rc=$?
     echo "promotion: $(promotion_mode)"
     exit "$rc" ;;
-  promote) promote_tag "${2:-}"; exit $? ;;
-  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote <vX.Y.Z>" >&2; exit 2 ;;
+  promote) promote_tag "${2:-}" "${3:-}"; exit $? ;;
+  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote [--detach] <vX.Y.Z>" >&2; exit 2 ;;
 esac
