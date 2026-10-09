@@ -53,11 +53,12 @@ promotion_mode() {
   case "$m" in auto|manual) echo "$m" ;; *) echo unknown ;; esac
 }
 # promote_tag TAG: the self-promotion. playd refuses it unless the app is on auto and then runs the one promotion service.
-# With --detach it returns as soon as playd has started the job; playd then sends the app's agent a message when the promotion ends.
+# It returns as soon as playd has started the job and playd then sends the app's agent a message when the promotion ends; with --wait
+# it stays until the promotion ends. A request made while a promotion of the app runs waits in one slot, a newer request replaces it.
 promote_tag() {
-  local tag="${1:-}" detach="" mode id rc=0 line t
-  if [ "${2:-}" = --detach ]; then detach=1; elif [ "$tag" = --detach ]; then detach=1; tag="${2:-}"; fi
-  if ! [[ "$tag" =~ ^v[0-9][0-9A-Za-z._+-]{0,60}$ ]]; then echo "usage: playground-app promote [--detach] vX.Y.Z (a tag already on main and pushed)" >&2; return 2; fi
+  local tag="${1:-}" detach=1 mode id rc=0 line t behind
+  if [ "${2:-}" = --wait ]; then detach=""; elif [ "$tag" = --wait ]; then detach=""; tag="${2:-}"; fi
+  if ! [[ "$tag" =~ ^v[0-9][0-9A-Za-z._+-]{0,60}$ ]]; then echo "usage: playground-app promote [--wait] vX.Y.Z (a tag already on main and pushed)" >&2; return 2; fi
   [ -n "${PLAYD_TOKEN:-}" ] && [ -n "${APP_NAME:-}" ] || { echo "promote: PLAYD_TOKEN and APP_NAME are not set; run this inside the app's agent container" >&2; return 1; }
   mode="$(promotion_mode)"
   case "$mode" in
@@ -72,6 +73,11 @@ promote_tag() {
   fi
   id="$(jq -r '.job_id // empty' <<<"$PD_BODY" 2>/dev/null)"
   [[ "$id" =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo "promote: playd did not return a job id" >&2; return 1; }
+  behind="$(jq -r '.queued_behind // empty' <<<"$PD_BODY" 2>/dev/null)"
+  if [ -n "$detach" ] && [ -n "$behind" ]; then
+    echo "promotion of $tag is QUEUED (job $id): $behind is being promoted right now. $APP_NAME has one waiting place and this request holds it. If you ask to promote a newer tag before then, that tag takes the place and this one is dropped on purpose (the newer tag includes it) and you are told. The waiting tag starts when $behind ends. Carry on: the platform messages you when it ends, or when it is replaced. Promote once per batch of changes."
+    return 0
+  fi
   if [ -n "$detach" ]; then
     echo "promotion of $tag started (job $id); the gates run first and it takes several minutes. Carry on with other work: the platform messages you when it ends (success or failure)."
     return 0
@@ -286,5 +292,5 @@ case "${1:-}" in
     echo "promotion: $(promotion_mode)"
     exit "$rc" ;;
   promote) promote_tag "${2:-}" "${3:-}"; exit $? ;;
-  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote [--detach] <vX.Y.Z>" >&2; exit 2 ;;
+  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote [--wait] <vX.Y.Z>" >&2; exit 2 ;;
 esac
