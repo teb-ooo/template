@@ -17,6 +17,7 @@ import (
 	playgroundlog "github.com/teb-ooo/playground-go/log"
 	"github.com/teb-ooo/playground-go/openapimcp"
 	"github.com/teb-ooo/playground-go/spa"
+	"github.com/teb-ooo/playground-go/surface"
 
 	"app/internal/db"
 	"app/web"
@@ -80,7 +81,8 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 	}
 	mux.Handle("/", spa.Handler(dist, cfg.SPA()))
 
-	return playgroundlog.Middleware(authn.Middleware(mux)), humaAPI, mcpH
+	// surface.Middleware is outermost: it tells a browser (UI) from an API call and strips a client-sent surface header.
+	return surface.Middleware(playgroundlog.Middleware(authn.Middleware(mux))), humaAPI, mcpH
 }
 
 // internalError logs the cause and returns a 500 that does not leak it.
