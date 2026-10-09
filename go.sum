@@ -51,8 +51,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/teb-ooo/playground-go v0.21.0 h1:uYpLe8BQcJxvG4s69yIs2u3KxKxeeJT01ivBAE0BdAs=
-github.com/teb-ooo/playground-go v0.21.0/go.mod h1:G2JepSX8RgTvg+RfYW6ca3W5ThfcBSyoYtK9BPQ+dYA=
+github.com/teb-ooo/playground-go v0.23.0 h1:C3+cg52WXgjmEyVexuGHm2zcheFGIFIHxY0HTJK0EZY=
+github.com/teb-ooo/playground-go v0.23.0/go.mod h1:G2JepSX8RgTvg+RfYW6ca3W5ThfcBSyoYtK9BPQ+dYA=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
