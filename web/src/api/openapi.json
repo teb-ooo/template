@@ -118,7 +118,7 @@
     "securitySchemes": {
       "bearer": {
         "bearerFormat": "JWT",
-        "description": "Access token issued by the identity service, or a personal access token (pat_...) created from the app's settings.",
+        "description": "Access token issued by the identity service (it must carry a scope for this app), or a platform API key (pk_...).",
         "scheme": "bearer",
         "type": "http"
       },
