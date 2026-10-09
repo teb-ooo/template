@@ -83,13 +83,13 @@ RUN bd metrics off
 USER root
 # The root step needs only Chrome's system libraries (Chrome itself is installed for the agent user below). `agent-browser install
 # --with-deps` also downloaded a 189 MB Chrome into /root just to delete it (a 120 s limit inside the tool failed new-app builds on a slow
-# link, playground-0g1z), so the libraries it installs (apt_dependency_specs in its cli/src/install.rs, Ubuntu t64 names) are listed here.
+# link, playground-0g1z), so the libraries it installs (apt_dependency_specs in its cli/src/install.rs, resolved on ubuntu:26.04: the t64 name where it exists, else the plain one) are listed here.
 # Check the list again when AGENT_BROWSER_VERSION changes.
 # Root's npm uses the canonical .npmrc, so this global install also runs under the 14-day release-age gate.
 # The package declares node >=24, which the image now provides (ADR 0072, 0073).
 COPY web/.npmrc /root/.npmrc
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0t64 libpangocairo-1.0-0t64 libpango-1.0-0t64 libatk1.0-0t64 libcairo-gobject2t64 libcairo2t64 libgdk-pixbuf-2.0-0t64 libxrender1 libasound2t64 libfreetype6 libfontconfig1 libdbus-1-3t64 libnss3 libnss3-tools libnspr4 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 libcups2t64 libxshmfence1 libgbm1 fonts-noto-color-emoji fonts-noto-cjk fonts-freefont-ttf \
+    libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0t64 libpangocairo-1.0-0 libpango-1.0-0 libatk1.0-0t64 libcairo-gobject2 libcairo2 libgdk-pixbuf-2.0-0 libxrender1 libasound2t64 libfreetype6 libfontconfig1 libdbus-1-3 libnss3 libnss3-tools libnspr4 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 libcups2t64 libxshmfence1 libgbm1 fonts-noto-color-emoji fonts-noto-cjk fonts-freefont-ttf \
  && rm -rf /var/lib/apt/lists/* \
  && /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
  && agent-browser --version
