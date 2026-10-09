@@ -81,20 +81,53 @@ RUN bd metrics off
 # (tools are built with temporary GOPATH/module/build caches so the layer keeps only the binaries: ~2.3 GB smaller)
 # agent-browser: the agent's interactive browser (BOOTSTRAP 9.12). Its Chrome also serves the Playwright smoke tests.
 USER root
-# `agent-browser install --with-deps` hard-codes `sudo apt-get`: install sudo for this one step and purge it after.
-# The package declares node >=24, which the image now provides (ADR 0072, 0073).
+# The root step needs only Chrome's system libraries (Chrome itself is installed for the agent user below). `agent-browser install
+# --with-deps` also downloaded a 189 MB Chrome into /root just to delete it (a 120 s limit inside the tool failed new-app builds on a slow
+# link, playground-0g1z), so the libraries it installs (apt_dependency_specs in its cli/src/install.rs, Ubuntu t64 names) are listed here.
+# Check the list again when AGENT_BROWSER_VERSION changes.
 # Root's npm uses the canonical .npmrc, so this global install also runs under the 14-day release-age gate.
+# The package declares node >=24, which the image now provides (ADR 0072, 0073).
 COPY web/.npmrc /root/.npmrc
-RUN apt-get update && apt-get install -y --no-install-recommends sudo \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0t64 libpangocairo-1.0-0t64 libpango-1.0-0t64 libatk1.0-0t64 libcairo-gobject2t64 libcairo2t64 libgdk-pixbuf-2.0-0t64 libxrender1 libasound2t64 libfreetype6 libfontconfig1 libdbus-1-3t64 libnss3 libnss3-tools libnspr4 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 libcups2t64 libxshmfence1 libgbm1 fonts-noto-color-emoji fonts-noto-cjk fonts-freefont-ttf \
+ && rm -rf /var/lib/apt/lists/* \
  && /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
- && agent-browser install --with-deps \
- && rm -rf /root/.agent-browser \
- && SUDO_FORCE_REMOVE=yes apt-get purge -y sudo && rm -rf /var/lib/apt/lists/* \
  && agent-browser --version
 # root's bd (the same binary is on PATH) must not send metrics either: shells opened with `docker exec` run as root
 RUN bd metrics off
 USER agent
-RUN agent-browser install   # per-user browser cache for the agent user
+# Chrome for the agent user (its per-user cache, where `agent-browser install` would put it). The tool's own downloader gives up after 120 s per
+# attempt and restarts from zero, which failed every new-app build on a slow link (playground-0g1z); curl resumes where it stopped instead.
+# Same source and layout as the tool: the Stable build of Chrome for Testing for linux64, the zip's top folder stripped, file modes kept.
+RUN <<'EOF'
+set -eu
+json=$(curl -fsS --retry 8 --retry-all-errors https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json)
+ver=$(echo "$json" | jq -r .channels.Stable.version)
+url=$(echo "$json" | jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url')
+dest="$HOME/.agent-browser/browsers/chrome-$ver"
+curl -fSL --retry 100 --retry-all-errors --retry-delay 2 --connect-timeout 30 -C - -o /tmp/chrome.zip "$url"
+python3 - "$dest" <<'PY'
+import os, sys, zipfile
+dest = sys.argv[1]
+with zipfile.ZipFile("/tmp/chrome.zip") as z:
+    for i in z.infolist():
+        rel = i.filename.split("/", 1)[1] if i.filename.startswith("chrome-") and "/" in i.filename else i.filename
+        if not rel:
+            continue
+        out = os.path.normpath(os.path.join(dest, rel))
+        if not out.startswith(dest + os.sep):
+            continue
+        if i.is_dir():
+            os.makedirs(out, exist_ok=True)
+            continue
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with z.open(i) as src, open(out, "wb") as dst:
+            dst.write(src.read())
+        os.chmod(out, (i.external_attr >> 16) or 0o644)
+PY
+rm -f /tmp/chrome.zip
+test -x "$dest/chrome"
+EOF
 COPY --chown=agent bin/playground-mcp /usr/local/bin/playground-mcp
 USER root
 COPY s6/ /etc/s6-overlay/s6-rc.d/
