@@ -89,7 +89,7 @@ USER root
 # The package declares node >=24, which the image now provides (ADR 0072, 0073).
 COPY web/.npmrc /root/.npmrc
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0t64 libpangocairo-1.0-0 libpango-1.0-0 libatk1.0-0t64 libcairo-gobject2 libcairo2 libgdk-pixbuf-2.0-0 libxrender1 libasound2t64 libfreetype6 libfontconfig1 libdbus-1-3 libnss3 libnss3-tools libnspr4 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 libcups2t64 libxshmfence1 libgbm1 fonts-noto-color-emoji fonts-noto-cjk fonts-freefont-ttf \
+    libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0t64 libpangocairo-1.0-0 libpango-1.0-0 libatk1.0-0t64 libcairo-gobject2 libcairo2 libgdk-pixbuf-2.0-0 libxrender1 libasound2t64 libfreetype6 libfontconfig1 libdbus-1-3 libnss3 libnss3-tools libnspr4 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 libcups2t64 libxshmfence1 libgbm1 unzip fonts-noto-color-emoji fonts-noto-cjk fonts-freefont-ttf \
  && rm -rf /var/lib/apt/lists/* \
  && /usr/local/node/bin/npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
  && agent-browser --version
@@ -98,7 +98,7 @@ RUN bd metrics off
 USER agent
 # Chrome for the agent user (its per-user cache, where `agent-browser install` would put it). The tool's own downloader gives up after 120 s per
 # attempt and restarts from zero, which failed every new-app build on a slow link (playground-0g1z); curl resumes where it stopped instead.
-# Same source and layout as the tool: the Stable build of Chrome for Testing for linux64, the zip's top folder stripped, file modes kept.
+# Same source and layout as the tool: the Stable build of Chrome for Testing for linux64 with the zip's top folder (chrome-linux64) stripped.
 RUN <<'EOF'
 set -eu
 json=$(curl -fsS --retry 8 --retry-all-errors https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json)
@@ -106,25 +106,10 @@ ver=$(echo "$json" | jq -r .channels.Stable.version)
 url=$(echo "$json" | jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url')
 dest="$HOME/.agent-browser/browsers/chrome-$ver"
 curl -fSL --retry 100 --retry-all-errors --retry-delay 2 --connect-timeout 30 -C - -o /tmp/chrome.zip "$url"
-python3 - "$dest" <<'PY'
-import os, sys, zipfile
-dest = sys.argv[1]
-with zipfile.ZipFile("/tmp/chrome.zip") as z:
-    for i in z.infolist():
-        rel = i.filename.split("/", 1)[1] if i.filename.startswith("chrome-") and "/" in i.filename else i.filename
-        if not rel:
-            continue
-        out = os.path.normpath(os.path.join(dest, rel))
-        if not out.startswith(dest + os.sep):
-            continue
-        if i.is_dir():
-            os.makedirs(out, exist_ok=True)
-            continue
-        os.makedirs(os.path.dirname(out), exist_ok=True)
-        with z.open(i) as src, open(out, "wb") as dst:
-            dst.write(src.read())
-        os.chmod(out, (i.external_attr >> 16) or 0o644)
-PY
+mkdir -p "$dest.tmp"
+unzip -q /tmp/chrome.zip -d "$dest.tmp"
+mv "$dest.tmp"/chrome-linux64 "$dest"
+rmdir "$dest.tmp"
 rm -f /tmp/chrome.zip
 test -x "$dest/chrome"
 EOF
