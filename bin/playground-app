@@ -29,7 +29,7 @@
 #               playground-owned files, release age, secret scan, parity test, browser smoke, migrations, health) and none can be skipped. A gate that fails is
 #               printed plainly and nothing changed. A promotion whose health check fails after the switch is rolled back to the previous
 #               image by playd (the database is not restored; the snapshot path is in the message). gate-check beforehand is optional; the history records you as app:<name> (auto).
-case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status | promote   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
+case "${1:-}" in -h|--help|help) sed -n '2,/^case/p' "$0" | sed '$d;s/^# \{0,1\}//'; echo "  build | test | smoke | restart | status | promote | job <id> [--failed]   see the script; restart = build + test + swap + smoke"; exit 0 ;; esac
 set -euo pipefail
 cd "${PLAYGROUND_APP_DIR:-/app}"
 # playd_call METHOD PATH [BODY]: this app's own call to playd (PLAYD_URL, PLAYD_TOKEN: the app token, own app only). Sets PD_STATUS
@@ -42,6 +42,25 @@ playd_call() {
   PD_STATUS="${out##*$'\n'}"
   case "$PD_STATUS" in [0-9][0-9][0-9]) ;; *) PD_STATUS=000 ;; esac
   if [[ "$out" == *$'\n'* ]]; then PD_BODY="${out%$'\n'*}"; else PD_BODY=""; fi
+}
+# job_show ID [--failed]: what a playd job (a promotion, say) printed and why it ended, without colour codes. Your own jobs only; the id is
+# in the promote output ("job ID") and in the platform's message. --failed cuts a test run down to its failed tests and their first error.
+job_show() {
+  local id="${1:-}" only="${2:-}" err
+  [[ "$id" =~ ^[A-Za-z0-9-]{8,64}$ ]] || { echo "usage: playground-app job <job id> [--failed]" >&2; return 2; }
+  [ -n "${PLAYD_TOKEN:-}" ] || { echo "job: PLAYD_TOKEN is not set; run this inside the app's agent container" >&2; return 1; }
+  PLAYD_TIMEOUT=30 playd_call GET "/v1/jobs/$id?snapshot=true"
+  case "$PD_STATUS" in 2*) ;; *) echo "job: playd answered $PD_STATUS: $(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null)" >&2; return 1 ;; esac
+  jq -r '"job \(.id): \(.kind) of \(.app), \(.status), started \(.started)" + (if .ended then ", ended \(.ended)" else "" end)' <<<"$PD_BODY" 2>/dev/null
+  err="$(jq -r '.error // empty' <<<"$PD_BODY" 2>/dev/null | sed $'s/\x1b\\[[0-9;]*m//g')"
+  if [ -n "$err" ] && [ "$only" = --failed ]; then
+    printf '%s\n' "$err" | grep -E $'\u2718' | head -20
+    printf '%s\n' "$err" | awk '/^  1\) \[/{f=1} f' | head -60
+  elif [ -n "$err" ]; then
+    echo "--- error ---"; printf '%s\n' "$err"
+  else
+    echo "--- progress ---"; jq -r '.lines[]?' <<<"$PD_BODY" 2>/dev/null | sed $'s/\x1b\\[[0-9;]*m//g' | tail -60
+  fi
 }
 # promotion_mode: auto, manual, or unknown (no token or app name, playd silent or not answering with a mode).
 promotion_mode() {
@@ -292,5 +311,6 @@ case "${1:-}" in
     echo "promotion: $(promotion_mode)"
     exit "$rc" ;;
   promote) promote_tag "${2:-}" "${3:-}"; exit $? ;;
-  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote [--wait] <vX.Y.Z>" >&2; exit 2 ;;
+  job) job_show "${2:-}" "${3:-}"; exit $? ;;
+  *) echo "usage: playground-app build|test|smoke [--grep <pattern>]|gate-check|restart [--quick]|status|browser|promote [--wait] <vX.Y.Z>|job <job id> [--failed]" >&2; exit 2 ;;
 esac
