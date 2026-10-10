@@ -42,6 +42,10 @@ ARG S6_OVERLAY_VERSION=3.2.3.2
 ARG CLAUDE_CODE_VERSION
 ARG BD_VERSION=1.2.2
 ARG AGENT_BROWSER_VERSION
+# sqlc and goose: pinned like the other tools (sqlc to the version in the generated header of internal/db/db.go, goose to the one in go.mod.tmpl);
+# `go install` checks the modules against the Go checksum database, so there is no separate checksum ARG.
+ARG SQLC_VERSION=v1.31.1
+ARG GOOSE_VERSION=v3.28.0
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl ca-certificates git openssh-client tmux jq xz-utils build-essential postgresql-client && rm -rf /var/lib/apt/lists/*
 # s6-overlay
@@ -74,7 +78,7 @@ RUN curl -fsSL https://claude.ai/install.sh | bash -s -- ${CLAUDE_CODE_VERSION} 
  && /usr/local/node/bin/npm install -g --prefix /home/agent/.local @beads/bd@${BD_VERSION} \
  && mkdir -p /home/agent/go/bin \
  && GOBIN=/home/agent/go/bin GOPATH=/tmp/gopath GOMODCACHE=/tmp/gomod GOCACHE=/tmp/gocache \
-    sh -c 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && go install github.com/pressly/goose/v3/cmd/goose@latest' \
+    sh -c 'go install github.com/sqlc-dev/sqlc/cmd/sqlc@${SQLC_VERSION} && go install github.com/pressly/goose/v3/cmd/goose@${GOOSE_VERSION}' \
  && chmod -R u+w /tmp/gomod && rm -rf /tmp/gopath /tmp/gomod /tmp/gocache
 # bd sends anonymous usage metrics to a third party by default: off for the agent user (ADR 0078)
 RUN bd metrics off

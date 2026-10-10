@@ -150,16 +150,16 @@ case "${1:-}" in
   build)
     (cd web && web_install && npm run build)
     # The CSP has no 'unsafe-eval': a bundle that generates code at runtime (Ajv's new Function) breaks in the browser.
-    node /playground/rules/tools/check-no-eval.mjs web/dist
+    node /playground/brain/rules/tools/check-no-eval.mjs web/dist
     # Staging runs the Vite dev server for HMR, but the built bundle must be a real production build: no dev-server code.
-    node /playground/rules/tools/check-no-dev.mjs web/dist
+    node /playground/brain/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
     v=$(git describe --tags --always --dirty 2>/dev/null || echo staging)
     CGO_ENABLED=0 go build -ldflags "-X main.version=$v" -o /app/bin/server.new ./cmd/server ;;
   test)
     # the npm release-age gate (BOOTSTRAP 7): the checker and canonical .npmrc live in the read-only rules mount
-    cmp -s /playground/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /playground/rules/npmrc: do not edit it" >&2; exit 1; }
-    node /playground/rules/tools/check-release-age.mjs web
+    cmp -s /playground/brain/rules/npmrc web/.npmrc || { echo "web/.npmrc differs from /playground/brain/rules/npmrc: do not edit it" >&2; exit 1; }
+    node /playground/brain/rules/tools/check-release-age.mjs web
     # the web unit and contract tests (design system, platform shell, generated API, no raw fetch, ...): vitest, a few seconds
     (cd web && web_install && npm test --silent) || { echo "web tests: FAILED" >&2; exit 1; }
     go_tests ;;
@@ -206,8 +206,8 @@ case "${1:-}" in
       echo "gate-check: lint (oxlint with the playground's config: errors fail, warnings do not)"
       (cd web && npm run lint) || { echo "gate-check: lint errors (fix them, or run with --skip-lint to rehearse the rest)" >&2; exit 1; }
     fi
-    node /playground/rules/tools/check-no-eval.mjs web/dist
-    node /playground/rules/tools/check-no-dev.mjs web/dist
+    node /playground/brain/rules/tools/check-no-eval.mjs web/dist
+    node /playground/brain/rules/tools/check-no-dev.mjs web/dist
     go generate ./... ; sqlc generate -f internal/db/sqlc.yaml
     if [ -n "$GC_SKIP_TESTS" ]; then echo "gate-check: --skip-tests (run \`playground-app test\` for go vet and go test)"; else
       echo "gate-check: go vet and go test (the contract tests included)"
