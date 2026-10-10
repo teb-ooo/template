@@ -6,7 +6,7 @@
 // This one only reads, so it publishes nothing. An operation that writes (create, update, delete) calls
 // d.Hub.Publish("<resource>", live.Everyone()) after the write succeeded, so every open screen refreshes without a
 // reload (rule UI-yvn; the resource is the first path segment after /api/). Pick the narrowest audience that fits:
-// live.Subject(sub) for one person's own data, live.Admins() for admin-only data. See docs/live-data.md.
+// live.Subject(sub) for one user's own data, live.Admins() for admin-only data. See docs/live-data.md.
 package api
 
 import (

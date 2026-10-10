@@ -39,7 +39,7 @@ describe("the entrance (/enter)", () => {
     expect(screen.getByRole("link", { name: "Enter" }).getAttribute("href")).toBe("/auth/login?next=%2Fthings%2F5");
   });
 
-  it("never sends the person to another site: next must be a path of this app", async () => {
+  it("never sends the user to another site: next must be a path of this app", async () => {
     setPlayground({ app_name: "sample", env: "production" });
     renderAt("/enter?next=%2F%2Fevil.example");
     expect((await screen.findByRole("link", { name: "Enter" })).getAttribute("href")).toBe("/auth/login?next=%2F");
@@ -51,7 +51,7 @@ describe("the entrance (/enter)", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/did not answer/);
   });
 
-  it("sends a signed-in person on to next", async () => {
+  it("sends a signed-in user on to next", async () => {
     server.use(
       http.get("*/auth/me", () =>
         HttpResponse.json({ subject: "u1", email: "a@x", username: "ada", groups: [], is_admin: false }),

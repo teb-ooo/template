@@ -267,7 +267,7 @@ test("GET /api/live signed out answers 401 problem+json", async ({ request }) =>
 });
 
 test.describe("live stream", () => {
-  test.skip(!sessionCookie, "SESSION_COOKIE is not set: the stream needs a signed-in person");
+  test.skip(!sessionCookie, "SESSION_COOKIE is not set: the stream needs a signed-in user");
 
   test("the page turns the stream on with ?live=1 and the bar shows no warning dot", async ({ page }) => {
     // Since ui 0.30 the bar draws the dot only while the stream is reconnecting or degraded.

@@ -2,9 +2,7 @@
 package api
 
 import (
-	"context"
 	"io/fs"
-	"log/slog"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -40,10 +38,23 @@ type Deps struct {
 // A resource file adds its hook from init, so api.go never changes.
 var registrations []func(*Deps)
 
-// New builds the whole application handler.
+// New builds the whole application handler. Call Close on it once the server has shut down.
 func New(cfg playground.Config, pool *pgxpool.Pool) http.Handler {
 	h, _, _ := build(cfg, pool)
 	return h
+}
+
+// closingHandler is the application handler that also holds the Auth, so Close can stop its key poller.
+type closingHandler struct {
+	http.Handler
+	authn *auth.Auth
+}
+
+// Close stops what New started (the Auth's key poller); h is the handler New returned. Safe to call more than once.
+func Close(h http.Handler) {
+	if c, ok := h.(closingHandler); ok {
+		c.authn.Close()
+	}
 }
 
 // build also returns the Huma API and the MCP handler, which the parity test needs.
@@ -61,7 +72,7 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 
 	d := &Deps{Cfg: cfg, Pool: pool, Mux: mux, API: humaAPI, Q: db.New(pool), Hub: live.NewHub()}
 	// A plain mux handler, not an operation: the OpenAPI document, the MCP tools and the parity check never see it.
-	// authn.Middleware (below) puts the signed-in person in the context; a signed-out call answers 401 problem+json.
+	// authn.Middleware (below) puts the signed-in user in the context; a signed-out call answers 401 problem+json.
 	live.Mount(mux, d.Hub)
 	for _, register := range registrations {
 		register(d)
@@ -82,11 +93,6 @@ func build(cfg playground.Config, pool *pgxpool.Pool) (http.Handler, huma.API, h
 	mux.Handle("/", spa.Handler(dist, cfg.SPA()))
 
 	// surface.Middleware is outermost: it tells a browser (UI) from an API call and strips a client-sent surface header.
-	return surface.Middleware(playgroundlog.Middleware(authn.Middleware(mux))), humaAPI, mcpH
-}
-
-// internalError logs the cause and returns a 500 that does not leak it.
-func internalError(ctx context.Context, what string, err error) error {
-	slog.ErrorContext(ctx, what+" failed", "error", err)
-	return huma.Error500InternalServerError("internal error")
+	top := surface.Middleware(playgroundlog.Middleware(authn.Middleware(mux)))
+	return closingHandler{Handler: top, authn: authn}, humaAPI, mcpH
 }

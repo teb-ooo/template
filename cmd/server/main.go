@@ -74,9 +74,11 @@ func run(args []string) error {
 		return nil
 	}
 
+	handler := api.New(cfg, pool)
+	defer api.Close(handler) // stops the Auth's key poller after the server has shut down
 	srv := &http.Server{
 		Addr:              cfg.Addr(),
-		Handler:           api.New(cfg, pool),
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}

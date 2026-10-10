@@ -6,7 +6,7 @@ import { appName, safeNext } from "../lib/entrance";
 
 // The page an emailed invitation link opens, on this app's own address: /invite?flow=...&token=...&next=/where/to/land
 // (docs/login-for-apps.md, "Invitations"). It spends nothing: mail programs fetch links to scan them. The button hands
-// the link to `id`, which registers the passkey and sends the person back to this app at `next`. Public route; the root
+// the link to `id`, which registers the passkey and sends the user back to this app at `next`. Public route; the root
 // layout draws no platform bar around it. Replace the page with the app's own design; keep the button's target.
 export const Route = createFileRoute("/invite")({
   staticData: { title: "Invitation" },
@@ -35,7 +35,7 @@ function InvitePage() {
         </LinkButton>
       ) : (
         <p className="text-ink-muted">
-          This invitation link does not work. Ask the person who invited you for a new one.
+          This invitation link does not work. Ask the user who invited you for a new one.
         </p>
       )}
     </EntrancePage>

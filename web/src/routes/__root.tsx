@@ -18,7 +18,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 const textLink = "text-ink-muted underline";
 
 // The platform shell (docs/shell.md): `Shell` draws the one platform top bar (app name, live dot,
-// staging mark, Cmd+K, Send feedback for the owner, person menu), registers the platform commands in Cmd+K and owns the
+// staging mark, Cmd+K, Send feedback for the owner, user menu), registers the platform commands in Cmd+K and owns the
 // feedback panel. This file renders no header of its own, passes none, and uses no feedback hook, no CommandTrigger and
 // no sign-in or sign-out control: web/test/platform-shell.test.ts fails the app that does. App-specific navigation goes in
 // the sidebar below, the page body and Cmd+K commands (`useRegisterCommands`).

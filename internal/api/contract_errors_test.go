@@ -8,7 +8,7 @@
 //   - WriteHeader(...) or Write(...) on an http.ResponseWriter parameter, or on huma.Context's BodyWriter()
 //   - json.NewEncoder(w) over such a writer.
 //
-// Routes outside Huma (mux.Handle) may use writeProblem, which writes problem+json; they are not scanned. Only calls written
+// Routes outside Huma (mux.Handle) may use apierr.WriteProblem, which writes problem+json; they are not scanned. Only calls written
 // directly in the handler are seen: a helper that the handler calls is not followed.
 //
 // To fix a failure: return the error from the handler, for example `return nil, huma.Error404NotFound("item not found")`
@@ -241,7 +241,7 @@ func TestRawResponseChecker(t *testing.T) {
 		}
 		return findRawResponses(fs)
 	}
-	t.Run("accepts huma errors and writeProblem on a plain mux route", func(t *testing.T) {
+	t.Run("accepts huma errors and apierr.WriteProblem on a plain mux route", func(t *testing.T) {
 		src := head + `
 func reg(api huma.API, mux *http.ServeMux) {
 	huma.Register(api, huma.Operation{}, get)

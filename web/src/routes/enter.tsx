@@ -8,7 +8,7 @@ import { appName, problemMessage, safeNext } from "../lib/entrance";
 // never uses RequireUser, and the root layout draws no platform bar around it. Replace the page with the app's own
 // design; keep the one link that starts the sign-in and the problem message. `EntrancePage` (@teb-ooo/ui/entrance) is the
 // platform's front door: a small swingset in a cloud of mist, drawn after the page is usable (three.js loads in its own
-// chunk, so the bundle a signed-in person loads does not grow) and absent without WebGL; its title is the heading for assistive
+// chunk, so the bundle a signed-in user loads does not grow) and absent without WebGL; its title is the heading for assistive
 // technology and tests. A design of your own may replace it.
 export const Route = createFileRoute("/enter")({
   staticData: { title: "Enter" },
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/enter")({
     next: typeof s.next === "string" ? s.next : undefined,
     problem: typeof s.problem === "string" ? s.problem : undefined,
   }),
-  // A person who is already signed in does not need the door.
+  // A user who is already signed in does not need the door.
   beforeLoad: async ({ context, search }) => {
     if (await ensureUser(context.queryClient)) throw redirect({ href: safeNext(search.next) });
   },

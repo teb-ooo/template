@@ -84,7 +84,7 @@ describe("root route", () => {
   });
 
   // The feedback tool belongs to the shell: "Send feedback" is in Cmd+K (and an icon in the bar) only for the superadmin or
-  // the app's owner (/auth/me), never for anybody else. (navigator.webdriver is not set in jsdom, so this is the person
+  // the app's owner (/auth/me), never for anybody else. (navigator.webdriver is not set in jsdom, so this is the user
   // check alone.)
   async function feedbackOffered(me: Record<string, unknown>) {
     server.use(http.get("*/auth/me", () => HttpResponse.json({ ...user, ...me })));
@@ -93,7 +93,7 @@ describe("root route", () => {
     await screen.findByRole("heading", { name: "Home" });
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     const box = await screen.findByRole("combobox");
-    await screen.findByRole("option", { name: /sign out/i }); // the person is known
+    await screen.findByRole("option", { name: /sign out/i }); // the user is known
     const inPalette = screen.queryByRole("option", { name: /send feedback/i }) !== null;
     fireEvent.keyDown(box, { key: "Escape" });
     return inPalette;
