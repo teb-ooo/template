@@ -42,6 +42,7 @@ internal/api/contract_sql_test.go
 internal/api/contract_migrations_test.go
 internal/api/contract_errors_test.go
 internal/api/contract_palette_test.go
+internal/api/surface_test.go
 web/test/entrance.test.ts
 Makefile
 internal/api/parity_test.go
