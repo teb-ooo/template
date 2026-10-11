@@ -5,4 +5,8 @@ cd /app
 mkdir -p /app/bin /app/.playground
 [ -x /app/bin/server ] || { cp /opt/playground/server /app/bin/server && chown agent:agent /app/bin/server; }
 chown agent:agent /app/.playground 2>/dev/null || true
+# On a staging site the server must not act in playd: playd gives it a read-only token (PLAYD_SERVER_TOKEN) to use as PLAYD_TOKEN, while the
+# agent in the same container keeps the app's own PLAYD_TOKEN. Production has no PLAYD_SERVER_TOKEN and is unchanged.
+if [ -n "${PLAYD_SERVER_TOKEN:-}" ]; then export PLAYD_TOKEN="$PLAYD_SERVER_TOKEN"; fi
+unset PLAYD_SERVER_TOKEN
 exec s6-setuidgid agent /app/bin/server
